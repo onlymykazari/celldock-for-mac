@@ -46,6 +46,7 @@ swiftc \
   "$ROOT/Sources/CellDockNetworkHelper/NetworkHelperState.swift" \
   "$ROOT/Sources/CellDock/Models.swift" \
   "$ROOT/Sources/CellDock/TrafficUsageStore.swift" \
+  "$ROOT/Sources/CellDock/VoicemailModels.swift" \
   "$ROOT/Sources/CellDock/SMSForwardingSigning.swift" \
   "$ROOT/Sources/CellDock/NotificationForwardingModels.swift" \
   "$ROOT/Sources/CellDock/NotificationForwardingStore.swift" \

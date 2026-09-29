@@ -6,6 +6,7 @@ enum PhoneWindowSection: String, CaseIterable, Identifiable {
     case dialer
     case recents
     case contacts
+    case voicemail
     case recordings
     case proxy
     case sim
@@ -19,6 +20,7 @@ enum PhoneWindowSection: String, CaseIterable, Identifiable {
         case .dialer: return L10n.tr("拨号")
         case .recents: return L10n.tr("最近通话")
         case .contacts: return L10n.tr("通讯录")
+        case .voicemail: return L10n.tr("语音信箱")
         case .recordings: return L10n.tr("通话录音")
         case .proxy: return L10n.tr("代理")
         case .sim: return L10n.tr("SIM 卡")
@@ -32,6 +34,7 @@ enum PhoneWindowSection: String, CaseIterable, Identifiable {
         case .dialer: return "circle.grid.3x3.fill"
         case .recents: return "clock.arrow.circlepath"
         case .contacts: return "person.crop.circle"
+        case .voicemail: return "voicemail"
         case .recordings: return "waveform"
         case .proxy: return "point.forward.to.point.capsulepath"
         case .sim: return "simcard"
@@ -331,7 +334,7 @@ final class CommunicationWindowController: NSObject, NSWindowDelegate {
         switch phoneModel.selection {
         case .messages: return L10n.tr("短信")
         case .recents, .dialer, .contacts: return L10n.tr("最近通话")
-        case .recordings: return L10n.tr("通话录音")
+        case .voicemail, .recordings: return L10n.tr("通话录音")
         case .proxy: return L10n.tr("代理")
         case .sim: return L10n.tr("SIM 卡")
         case .settings: return L10n.tr("设置")

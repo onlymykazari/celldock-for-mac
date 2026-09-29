@@ -1783,3 +1783,24 @@
 "模组已断开连接；请检查 USB 线缆或重新插入。" = "The module disconnected; check the USB cable or re-plug it.";
 "模组连接异常：%@" = "Module connection error: %@";
 "这是一条来自 CellDock 通知转发功能的测试消息。" = "This is a test message from CellDock notification forwarding.";
+
+/* Voicemail */
+"语音信箱" = "Voicemail";
+"暂无留言" = "No messages";
+"标记为已读" = "Mark as read";
+"启用语音信箱后，未及时接听的来电会在响铃超时后自动接听并录制留言。" = "With voicemail enabled, unanswered calls are picked up automatically after the ring timeout and a message is recorded.";
+"删除这条留言？" = "Delete this message?";
+"删除留言" = "Delete message";
+"留言条目将从列表移除；底层录音文件仍保留在通话录音中。" = "The entry is removed from the list; the underlying recording stays in Call Recordings.";
+"该留言没有可用音频" = "No audio available for this message";
+"留言时长 %lld 秒" = "Message length %lld seconds";
+"启用语音信箱" = "Enable voicemail";
+"跟随 macOS 专注模式" = "Follow macOS Focus";
+"专注模式：开启中，语音信箱接管中" = "Focus: on — voicemail is taking over";
+"专注模式：已关闭，来电正常响铃" = "Focus: off — calls ring normally";
+"无法读取专注模式状态，语音信箱暂不接管" = "Focus state unreadable; voicemail will not take over";
+"响铃 %@ 秒后自动接听" = "Answer after %@ seconds of ringing";
+"单条留言最长 %@ 秒" = "Maximum message length %@ seconds";
+"语音信箱在通话音频可用时工作：响铃超时后自动接听并录音，通话结束（对方挂断或到达最长时长）后保存留言。跟随专注模式依赖系统状态探测；无法读取状态时语音信箱不会自动接管。" = "Voicemail works when call audio is available: it answers after the ring timeout, records, and saves the message when the call ends (caller hangs up or the cap is reached). Following Focus relies on system-state probing; when the state is unreadable voicemail never takes over.";
+"语音信箱留言" = "Voicemail message";
+"来电已转入语音信箱并录制留言，点击查看。" = "A call went to voicemail and a message was recorded; click to view.";

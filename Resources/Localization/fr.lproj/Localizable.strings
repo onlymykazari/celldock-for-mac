@@ -1780,3 +1780,24 @@
 "模组已断开连接；请检查 USB 线缆或重新插入。" = "Le module s'est déconnecté ; vérifiez le câble USB ou rebranchez-le.";
 "模组连接异常：%@" = "Erreur de connexion du module : %@";
 "这是一条来自 CellDock 通知转发功能的测试消息。" = "Ceci est un message de test du transfert de notifications CellDock.";
+
+/* Voicemail */
+"语音信箱" = "Messagerie vocale";
+"暂无留言" = "Aucun message";
+"标记为已读" = "Marquer comme lu";
+"启用语音信箱后，未及时接听的来电会在响铃超时后自动接听并录制留言。" = "Avec la messagerie vocale activée, les appels sans réponse sont décrochés automatiquement après le délai de sonnerie et un message est enregistré.";
+"删除这条留言？" = "Supprimer ce message ?";
+"删除留言" = "Supprimer le message";
+"留言条目将从列表移除；底层录音文件仍保留在通话录音中。" = "L'entrée est retirée de la liste ; le fichier d'enregistrement reste dans les enregistrements d'appels.";
+"该留言没有可用音频" = "Aucun audio disponible pour ce message";
+"留言时长 %lld 秒" = "Durée du message : %lld secondes";
+"启用语音信箱" = "Activer la messagerie vocale";
+"跟随 macOS 专注模式" = "Suivre le mode Concentration de macOS";
+"专注模式：开启中，语音信箱接管中" = "Concentration : active — la messagerie vocale prend le relais";
+"专注模式：已关闭，来电正常响铃" = "Concentration : inactive — les appels sonnent normalement";
+"无法读取专注模式状态，语音信箱暂不接管" = "État de concentration illisible ; la messagerie vocale ne prend pas le relais";
+"响铃 %@ 秒后自动接听" = "Décrocher après %@ secondes de sonnerie";
+"单条留言最长 %@ 秒" = "Durée maximale d'un message : %@ secondes";
+"语音信箱在通话音频可用时工作：响铃超时后自动接听并录音，通话结束（对方挂断或到达最长时长）后保存留言。跟随专注模式依赖系统状态探测；无法读取状态时语音信箱不会自动接管。" = "La messagerie vocale fonctionne quand l'audio d'appel est disponible : décrochage après le délai de sonnerie, enregistrement, puis sauvegarde du message à la fin de l'appel (raccroché ou durée maximale atteinte). Le suivi de la Concentration dépend de la détection de l'état système ; si l'état est illisible, elle ne prend pas le relais.";
+"语音信箱留言" = "Message vocal";
+"来电已转入语音信箱并录制留言，点击查看。" = "Un appel est passé sur la messagerie vocale et un message a été enregistré ; cliquez pour afficher.";

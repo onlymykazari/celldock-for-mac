@@ -93,6 +93,13 @@ struct PhoneWindowView: View {
                 model.present(number: number, section: .dialer)
             }
             .environmentObject(appState)
+        case .voicemail:
+            VoicemailListView(
+                voicemail: appState.voicemail,
+                recordings: appState.callRecordings,
+                contacts: contacts
+            )
+                .environmentObject(appState)
         case .recordings:
             RecordingsLibraryView(
                 recordings: appState.callRecordings,
@@ -491,7 +498,7 @@ private struct CommunicationRailView: View {
 
     private func selectionGroup(for section: PhoneWindowSection) -> String {
         switch section {
-        case .messages, .recents, .recordings, .proxy:
+        case .messages, .recents, .voicemail, .recordings, .proxy:
             return "primary"
         case .sim, .settings:
             return "secondary"

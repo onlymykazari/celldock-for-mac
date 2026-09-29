@@ -171,6 +171,29 @@ final class NotificationService: NSObject, UNUserNotificationCenterDelegate {
         ))
     }
 
+    /// Time-sensitive so a voicemail saved while Focus is active still gets
+    /// through (the whole point of capturing a message).
+    func postVoicemail(
+        number: String,
+        displayName: String? = nil,
+        presentation: PrivacyPresentation
+    ) {
+        let content = UNMutableNotificationContent()
+        content.title = presentation.isEnabled
+            ? L10n.tr("语音信箱留言")
+            : (displayName ?? number)
+        content.subtitle = L10n.tr("语音信箱留言")
+        content.body = L10n.tr("来电已转入语音信箱并录制留言，点击查看。")
+        content.sound = .default
+        content.threadIdentifier = "app.celldock.voicemail"
+        content.interruptionLevel = .timeSensitive
+        center.add(UNNotificationRequest(
+            identifier: "voicemail-\(UUID().uuidString)",
+            content: content,
+            trigger: nil
+        ))
+    }
+
     func clearSensitiveNotifications() {
         center.removeAllDeliveredNotifications()
         center.removeAllPendingNotificationRequests()

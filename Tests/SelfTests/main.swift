@@ -3930,6 +3930,28 @@ do {
         "custom header parsing did not keep only well-formed lines"
     )
 
+    // MARK: Voicemail Focus-mode probe (doc: best-effort, fail safe)
+
+    try expect(
+        FocusModeProbe.evaluate(assertionsJSON: Data(#"""
+        {"data":[{"assertionDetails":{"assertionType":"com.apple.donotdisturb.mode.focus.work"}}]}
+        """#.utf8)) == .active,
+        "a DND/Focus assertion was not detected as active"
+    )
+    try expect(
+        FocusModeProbe.evaluate(assertionsJSON: Data(#"""
+        {"data":[]}
+        """#.utf8)) == .inactive,
+        "an empty assertion list was not detected as Focus off"
+    )
+    try expect(
+        FocusModeProbe.evaluate(assertionsJSON: Data("not json".utf8)) == .unknown &&
+            FocusModeProbe.evaluate(assertionsJSON: Data(#"""
+        {"data":[{"assertionDetails":{"assertionType":"com.apple.other"}}]}
+        """#.utf8)) == .inactive,
+        "malformed or unrelated assertions did not fail safe"
+    )
+
     print("CellDock self-tests passed (calls, PDU/UDH, SOCKS5, VoWiFi, buffering, storage, merge, init-robustness).")
 } catch {
     fputs("Self-test failed: \(error)\n", stderr)

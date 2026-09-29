@@ -152,6 +152,7 @@ final class AppState: ObservableObject {
         }
         loadLastEnabledCellularNetworkModes()
         startTrafficUsageSampling()
+        voicemail.startFocusPolling()
     }
 
     // MARK: Traffic usage (menu bar quick controls & traffic panel)
@@ -1147,6 +1148,108 @@ final class AppState: ObservableObject {
         )
     }
 
+    // MARK: Voicemail
+
+    let voicemail = VoicemailStore.shared
+    private var voicemailAutoAnswerTask: Task<Void, Never>?
+    private var voicemailMaximumDurationTask: Task<Void, Never>?
+    private var voicemailTakeoverNumber: String?
+    private var voicemailTakeoverStartedAt: Date?
+    private var voicemailRecordingAttemptedCallID: UUID?
+    private var voicemailRecordingCallID: UUID?
+    private var voicemailTakeoverActive = false
+
+    private func scheduleVoicemailAutoAnswerIfNeeded(number: String?) {
+        guard voicemail.isTakingOverCalls,
+              voicemailAutoAnswerTask == nil,
+              call.voiceOverUSBSupported else {
+            return
+        }
+        let answerAfter = max(3, voicemail.settings.answerAfterSeconds)
+        voicemailTakeoverNumber = number
+        voicemailTakeoverStartedAt = Date()
+        voicemailAutoAnswerTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: UInt64(answerAfter) * 1_000_000_000)
+            guard !Task.isCancelled, let self else { return }
+            self.voicemailAutoAnswerTask = nil
+            // Re-verify on wake: the user may have answered, the caller may
+            // have hung up, or audio may have degraded while ringing.
+            guard self.call.phase == .incoming, self.call.voiceOverUSBSupported else {
+                return
+            }
+            self.voicemailTakeoverActive = true
+            self.answerCall()
+        }
+    }
+
+    private func cancelVoicemailAutoAnswer() {
+        voicemailAutoAnswerTask?.cancel()
+        voicemailAutoAnswerTask = nil
+    }
+
+    /// Starts recording once an answered voicemail call has live audio.
+    private func handleVoicemailRecordingAfterAnswer() {
+        guard voicemailTakeoverActive,
+              call.phase == .active,
+              call.audioActive,
+              let callID = callHistory.currentCallID(for: call.moduleID),
+              voicemailRecordingAttemptedCallID != callID else {
+            return
+        }
+        voicemailRecordingAttemptedCallID = callID
+        voicemailRecordingCallID = callID
+        guard callRecordings.phase == .idle else { return }
+        startCallRecording()
+        scheduleVoicemailMaximumDuration()
+    }
+
+    private func scheduleVoicemailMaximumDuration() {
+        voicemailMaximumDurationTask?.cancel()
+        let seconds = max(15, voicemail.settings.maximumRecordSeconds)
+        voicemailMaximumDurationTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: UInt64(seconds) * 1_000_000_000)
+            guard !Task.isCancelled, let self else { return }
+            guard self.voicemailTakeoverActive, self.call.phase == .active else { return }
+            self.hangUp()
+        }
+    }
+
+    /// Called when a call fully ends. If that call was a voicemail takeover,
+    /// stop the recording and turn it into a voicemail record + notification.
+    private func finalizeVoicemailIfActive() {
+        guard voicemailTakeoverActive else { return }
+        voicemailTakeoverActive = false
+        voicemailMaximumDurationTask?.cancel()
+        voicemailMaximumDurationTask = nil
+        let expectedCallID = voicemailRecordingCallID
+        let number = voicemailTakeoverNumber ?? ""
+        let startedAt = voicemailTakeoverStartedAt ?? Date()
+        stopCallRecording { [weak self] in
+            guard let self else { return }
+            guard let expectedCallID,
+                  let recording = self.callRecordings.records.first(where: { $0.callID == expectedCallID }) else {
+                // The call ended before live audio existed; there is nothing
+                // worth keeping as a voicemail message.
+                return
+            }
+            self.voicemail.append(VoicemailRecord(
+                number: number,
+                timestamp: startedAt,
+                duration: recording.duration,
+                fileName: recording.fileName,
+                callRecordingRecordID: recording.id
+            ))
+            NotificationService.shared.postVoicemail(
+                number: number,
+                displayName: SystemContactStore.shared.displayName(for: number),
+                presentation: self.privacyPresentation
+            )
+        }
+        voicemailTakeoverNumber = nil
+        voicemailTakeoverStartedAt = nil
+        voicemailRecordingCallID = nil
+    }
+
     private func handleCallSnapshot(
         _ snapshot: CallSnapshot,
         moduleID: CellularModuleID
@@ -1230,6 +1333,7 @@ final class AppState: ObservableObject {
         if taggedSnapshot.phase == .incoming {
             if shouldNotify {
                 alertSounds.startIncomingRingtone()
+                scheduleVoicemailAutoAnswerIfNeeded(number: taggedSnapshot.number)
                 if !CommunicationWindowController.shared.isPresentingCallUI {
                     NotificationService.shared.postIncomingCall(
                         number: taggedSnapshot.number,
@@ -1250,6 +1354,7 @@ final class AppState: ObservableObject {
 
         alertSounds.stopIncomingRingtone()
         NotificationService.shared.clearIncomingCall()
+        cancelVoicemailAutoAnswer()
         if let completedCall, completedCall.isMissed {
             NotificationService.shared.postMissedCall(
                 completedCall,
@@ -1262,6 +1367,11 @@ final class AppState: ObservableObject {
                 moduleName: context.moduleName,
                 operatorName: context.operatorName
             )
+        }
+        if taggedSnapshot.hasCall {
+            handleVoicemailRecordingAfterAnswer()
+        } else {
+            finalizeVoicemailIfActive()
         }
 
         if !taggedSnapshot.hasCall,
