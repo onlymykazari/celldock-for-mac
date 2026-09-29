@@ -3825,6 +3825,36 @@ do {
         "an active ECM link with a ready SIM did not report available"
     )
 
+    // MARK: Module sensor parsers (quick controls)
+
+    try expect(
+        ATResponseParser.parseAirplaneModeActive("+CFUN: 0\r\n\r\nOK") == true &&
+            ATResponseParser.parseAirplaneModeActive("+CFUN: 1\r\n\r\nOK") == false &&
+            ATResponseParser.parseAirplaneModeActive("ERROR") == nil,
+        "CFUN state parsing did not separate airplane mode from full service"
+    )
+    try expect(
+        ATResponseParser.parseModuleTemperature("+QTEMP: \"local\": 42\r\n\r\nOK") == 42 &&
+            ATResponseParser.parseModuleTemperature("+QTEMP: \"local\", 41\r\n\r\nOK") == 41 &&
+            ATResponseParser.parseModuleTemperature("+QTEMP: \"cpu\":35,\"pa0\":41\r\n\r\nOK") == 41 &&
+            ATResponseParser.parseModuleTemperature("ERROR") == nil &&
+            ATResponseParser.parseModuleTemperature("+QTEMP: 999\r\n\r\nOK") == nil,
+        "QTEMP parsing failed on one of the known firmware response shapes"
+    )
+    try expect(
+        ATResponseParser.parseCBCVoltage("+CBC: 0,80,4040\r\n\r\nOK") == 4.04 &&
+            ATResponseParser.parseCBCVoltage("+CBC: 4.04\r\n\r\nOK") == 4.04 &&
+            ATResponseParser.parseCBCVoltage("ERROR") == nil,
+        "CBC voltage parsing did not normalize millivolt and volt responses"
+    )
+    try expect(
+        ATResponseParser.parseQGDCNT("+QGDCNT: 1234,5678\r\n\r\nOK") == TrafficUsage(
+            receivedBytes: 1234,
+            sentBytes: 5678
+        ) && ATResponseParser.parseQGDCNT("ERROR") == nil,
+        "QGDCNT parsing did not produce module traffic counters"
+    )
+
     print("CellDock self-tests passed (calls, PDU/UDH, SOCKS5, VoWiFi, buffering, storage, merge, init-robustness).")
 } catch {
     fputs("Self-test failed: \(error)\n", stderr)

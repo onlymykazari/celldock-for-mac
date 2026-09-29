@@ -103,6 +103,12 @@ struct MenuContentView: View {
         AdaptiveGlassContainer(spacing: 14) {
             VStack(spacing: 14) {
                 cellularOverviewCard
+                if showsQuickControls {
+                    QuickControlsCard(
+                        moduleID: appState.currentCommunicationModule?.id,
+                        treatment: contentGlassTreatment
+                    )
+                }
                 if let message = appState.transientMessage {
                     notice(message, isError: appState.transientIsError)
                 }
@@ -113,6 +119,10 @@ struct MenuContentView: View {
             }
         }
         .padding(16)
+    }
+
+    private var showsQuickControls: Bool {
+        appState.currentCommunicationModule?.modem.isConnected == true
     }
 
     private var communicationLauncher: some View {

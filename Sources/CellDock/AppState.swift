@@ -58,6 +58,9 @@ final class AppState: ObservableObject {
     @Published private(set) var autoDeleteReadVerificationMessages: Bool
     @Published private(set) var automaticallyRecordCalls: Bool
     @Published private(set) var isPresentationPrivacyEnabled: Bool
+    /// Cumulative cellular traffic per module IMEI. Module-side counters take
+    /// precedence when supported; otherwise host-side deltas accumulate here.
+    @Published private(set) var trafficUsageByModuleIMEI: [String: TrafficUsage] = [:]
     @Published private(set) var isMenuBarStatusItemVisible: Bool
     @Published private(set) var showsMenuBarNetworkSpeed: Bool
     @Published private(set) var notificationAuthorizationStatus: AppNotificationAuthorizationStatus = .unknown
@@ -146,6 +149,133 @@ final class AppState: ObservableObject {
             forKey: Self.selectedInternetModuleKey
         ) {
             primaryDataModuleID = CellularModuleID(rawValue: storedModuleID)
+        }
+        loadLastEnabledCellularNetworkModes()
+        startTrafficUsageSampling()
+    }
+
+    // MARK: Traffic usage (menu bar quick controls & traffic panel)
+
+    private var trafficSamplingTimer: Timer?
+    private let trafficUsageStore = TrafficUsageStore()
+
+    private func startTrafficUsageSampling() {
+        guard trafficSamplingTimer == nil else { return }
+        let timer = Timer(timeInterval: 2, repeats: true) { [weak self] _ in
+            Task { @MainActor [weak self] in self?.sampleTrafficUsage() }
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        trafficSamplingTimer = timer
+    }
+
+    private func sampleTrafficUsage() {
+        var sampled: [String: TrafficUsage] = [:]
+        for module in cellularModules {
+            guard let imei = module.modem.moduleIMEI else { continue }
+            if let moduleUsage = module.modem.moduleTrafficBytes {
+                trafficUsageStore.setModuleUsage(moduleUsage, forModuleIMEI: imei)
+            } else {
+                let bsdName = module.network.bsdName
+                let counters = bsdName.flatMap { NetworkInterfaceCounterReader.read(interfaceName: $0) }
+                trafficUsageStore.accumulate(
+                    counters: counters,
+                    interfaceName: bsdName,
+                    forModuleIMEI: imei
+                )
+            }
+            sampled[imei] = trafficUsageStore.usage(forModuleIMEI: imei)
+        }
+        let stored = trafficUsageStore.usageByModuleIMEI
+        let merged = stored.merging(sampled) { storedValue, _ in storedValue }
+        if merged != trafficUsageByModuleIMEI {
+            trafficUsageByModuleIMEI = merged
+        }
+    }
+
+    func trafficUsage(forModuleIMEI imei: String?) -> TrafficUsage? {
+        guard let imei else { return nil }
+        return trafficUsageByModuleIMEI[imei]
+    }
+
+    func resetTrafficUsage(forModuleIMEI imei: String) {
+        trafficUsageStore.reset(forModuleIMEI: imei)
+        if trafficUsageStore.usageByModuleIMEI != trafficUsageByModuleIMEI {
+            trafficUsageByModuleIMEI = trafficUsageStore.usageByModuleIMEI
+        }
+    }
+
+    // MARK: Quick controls (menu bar card)
+
+    private var lastEnabledCellularNetworkModeByModuleID: [CellularModuleID: CellularNetworkMode] = [:]
+
+    private static let lastEnabledCellularNetworkModeKey =
+        "CellDock.LastEnabledCellularNetworkModeByModule.v1"
+
+    private func loadLastEnabledCellularNetworkModes() {
+        guard let raw = UserDefaults.standard.dictionary(
+            forKey: Self.lastEnabledCellularNetworkModeKey
+        ) as? [String: Int] else {
+            return
+        }
+        var modes: [CellularModuleID: CellularNetworkMode] = [:]
+        for (key, value) in raw {
+            guard let mode = CellularNetworkMode(rawValue: value), mode.isEnabled else {
+                continue
+            }
+            modes[CellularModuleID(rawValue: key)] = mode
+        }
+        lastEnabledCellularNetworkModeByModuleID = modes
+    }
+
+    private func persistLastEnabledCellularNetworkModes() {
+        let raw = Dictionary(uniqueKeysWithValues: lastEnabledCellularNetworkModeByModuleID.map {
+            ($0.key.rawValue, $0.value.rawValue)
+        })
+        UserDefaults.standard.set(raw, forKey: Self.lastEnabledCellularNetworkModeKey)
+    }
+
+    /// Quick-control entry: flips cellular data off, or back to the last
+    /// enabled mode (defaulting to standby). Same planning machinery as the
+    /// overview card's mode menu — no separate data path.
+    func toggleCellularData(for moduleID: CellularModuleID) {
+        let current = networkMode(for: moduleID)
+        if current.isEnabled {
+            lastEnabledCellularNetworkModeByModuleID[moduleID] = current
+            persistLastEnabledCellularNetworkModes()
+            setCellularNetworkMode(.off, for: moduleID)
+            return
+        }
+        let restore: CellularNetworkMode
+        if let last = lastEnabledCellularNetworkModeByModuleID[moduleID], last.isEnabled {
+            restore = last
+        } else if let stored = storedCellularNetworkMode(for: moduleID), stored.isEnabled {
+            restore = stored
+        } else {
+            restore = .defaultConnectionMode
+        }
+        setCellularNetworkMode(restore, for: moduleID)
+    }
+
+    /// Toggles RF off/on (airplane mode) for the currently active module and
+    /// surfaces a transient message on failure.
+    func toggleAirplaneMode(for moduleID: CellularModuleID?) {
+        let snapshot = moduleID.flatMap { moduleSnapshot(for: $0) }
+        let target = snapshot?.isAirplaneModeActive == true ? false : true
+        guard let service = modemService(for: moduleID) else {
+            presentTransientMessage(L10n.tr("模组未连接，无法切换飞行模式。"), isError: true)
+            return
+        }
+        service.setAirplaneMode(target) { [weak self] error in
+            guard let self else { return }
+            if let error {
+                self.presentTransientMessage(error, isError: true)
+            } else {
+                self.presentTransientMessage(
+                    target
+                        ? L10n.tr("飞行模式已开启：模组射频已关闭，通话与短信暂停。")
+                        : L10n.tr("飞行模式已关闭：模组正在恢复注册。")
+                )
+            }
         }
     }
 

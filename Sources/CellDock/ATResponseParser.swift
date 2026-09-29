@@ -430,8 +430,102 @@ enum ATResponseParser {
         return ["SM", "ME", "MT"].contains(storage) ? storage : nil
     }
 
-    static func splitCSV(_ value: String) -> [String] {
-        var fields: [String] = []
+    // MARK: Sensors & power (menu bar quick controls)
+
+    /// AT+CFUN? — `<fun>` 0 is minimum functionality (RF off, i.e. airplane
+    /// mode); 1 is full service. Returns nil for anything else (airplane
+    /// state stays "not known" instead of guessing).
+    static func parseAirplaneModeActive(_ response: String) -> Bool? {
+        guard let line = normalizedLines(response).first(where: { $0.hasPrefix("+CFUN:") }) else {
+            return nil
+        }
+        let payload = line.dropFirst("+CFUN:".count)
+            .split(separator: ",")
+            .first
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+        switch payload.flatMap(Int.init) {
+        case 0: return true
+        case 1: return false
+        default: return nil
+        }
+    }
+
+    /// AT+QTEMP — firmware formats vary widely: `+QTEMP: "local": 42`,
+    /// `+QTEMP: "local",42`, `+QTEMP: "cpu":35,"pa0":41` or a bare
+    /// `+QTEMP: 35,40,38`. Tolerant parse: prefer a "local"-labelled
+    /// reading, else the highest plausible silicon temperature.
+    static func parseModuleTemperature(_ response: String) -> Double? {
+        guard let line = normalizedLines(response).first(where: { $0.hasPrefix("+QTEMP:") }) else {
+            return nil
+        }
+        let payload = String(line.dropFirst("+QTEMP:".count))
+        var labelled: [(label: String, value: Double)] = []
+        var bare: [Double] = []
+        var pendingLabel: String?
+        for field in splitCSV(payload) {
+            let trimmed = field.trimmingCharacters(in: .whitespaces)
+            guard !trimmed.isEmpty else { continue }
+            let labelValue = trimmed.split(separator: ":", maxSplits: 1)
+            if trimmed.hasPrefix("\""), labelValue.count == 2,
+               let value = Double(labelValue[1].trimmingCharacters(in: CharacterSet(charactersIn: "\" "))) {
+                labelled.append((unquote(String(labelValue[0])).lowercased(), value))
+                pendingLabel = nil
+            } else if trimmed.hasPrefix("\"") {
+                pendingLabel = unquote(trimmed).lowercased()
+            } else if let value = Double(trimmed) {
+                if let label = pendingLabel {
+                    labelled.append((label, value))
+                    pendingLabel = nil
+                } else {
+                    bare.append(value)
+                }
+            }
+        }
+        if let local = labelled.first(where: { $0.label.contains("local") })?.1,
+           plausibleTemperature(local) {
+            return local
+        }
+        let candidates = (labelled.map(\.value) + bare).filter(plausibleTemperature)
+        return candidates.max()
+    }
+
+    private static func plausibleTemperature(_ value: Double) -> Bool {
+        (-40 ... 125).contains(value)
+    }
+
+    /// AT+CBC — classic form is `+CBC: <bcs>,<bcl>,<voltage_mV>` (e.g.
+    /// `+CBC: 0,80,4040` = 4.04 V); some builds report volts directly
+    /// (`+CBC: 4.04`). Returns volts, or nil when nothing plausible is
+    /// reported.
+    static func parseCBCVoltage(_ response: String) -> Double? {
+        guard let line = normalizedLines(response).first(where: { $0.hasPrefix("+CBC:") }) else {
+            return nil
+        }
+        let numbers = String(line.dropFirst("+CBC:".count))
+            .split(whereSeparator: { $0 == "," || $0 == " " })
+            .compactMap { Double($0.trimmingCharacters(in: CharacterSet(charactersIn: "\"Vv"))) }
+        guard let voltage = numbers.last else { return nil }
+        if voltage > 100 {
+            return voltage / 1000
+        }
+        return (2.5 ... 15).contains(voltage) ? voltage : nil
+    }
+
+    /// AT+QGDCNT? — `+QGDCNT: <rx_bytes>,<tx_bytes>` when the firmware keeps
+    /// PDP-context data counters. Nil means unsupported or not reported, in
+    /// which case host-side accumulation takes over.
+    static func parseQGDCNT(_ response: String) -> TrafficUsage? {
+        guard let line = normalizedLines(response).first(where: { $0.hasPrefix("+QGDCNT:") }) else {
+            return nil
+        }
+        let numbers = String(line.dropFirst("+QGDCNT:".count))
+            .split(separator: ",")
+            .compactMap { UInt64($0.trimmingCharacters(in: .whitespaces)) }
+        guard numbers.count >= 2 else { return nil }
+        return TrafficUsage(receivedBytes: numbers[0], sentBytes: numbers[1])
+    }
+
+    static func splitCSV(_ value: String) -> [String] {        var fields: [String] = []
         var current = ""
         var isQuoted = false
 

@@ -154,6 +154,9 @@ final class ModemService {
     private var configurationQueryRetryGeneration: UInt64 = 0
     private var configurationQueryRetryAttempts = 0
     private var voicePreparationGeneration: UInt64 = 0
+    private var needsSensorRefresh = false
+    /// Nil = AT+QGDCNT support not probed yet; false = unsupported firmware.
+    private var isModuleTrafficCounterSupported: Bool?
 
     init(locationID: UInt32? = nil) {
         preferredLocationID = locationID
@@ -2632,6 +2635,10 @@ final class ModemService {
         if tickNumber.isMultiple(of: 10) {
             refreshRadioSnapshot()
         }
+        if needsSensorRefresh || tickNumber.isMultiple(of: 30) {
+            needsSensorRefresh = false
+            refreshSensorSnapshot()
+        }
         if needsSIMRefresh || Date() >= nextSIMRefreshAt {
             needsSIMRefresh = false
             refreshSIMSnapshot()
@@ -2869,6 +2876,8 @@ final class ModemService {
         prepareVoiceBackend(hardwareFamily: hardwareFamily)
         refreshRadioSnapshot()
         needsImmediateMessagePoll = true
+        needsSensorRefresh = true
+        isModuleTrafficCounterSupported = nil
     }
 
     private func setInitializationStage(_ stage: ModemInitializationStage) {
@@ -3103,6 +3112,69 @@ final class ModemService {
         callSnapshot.controlInterfaceBusy = false
         publishSnapshot(snapshot)
         publishCallSnapshot()
+    }
+
+    // MARK: Sensors, power & RF state (menu bar quick controls)
+
+    /// Low-frequency health/sensor poll: RF state (which doubles as an
+    /// always-legal liveness probe), temperature, voltage and module-side
+    /// traffic counters. Every field is best-effort — firmware that does not
+    /// answer simply leaves the field nil and the UI hides it.
+    private func refreshSensorSnapshot() {
+        guard isOpen, !callSnapshot.hasCall else { return }
+        let cfun = command("AT+CFUN?", timeout: 3_000)
+        snapshot.isAirplaneModeActive = ATResponseParser.parseAirplaneModeActive(cfun.output)
+        let temperature = command("AT+QTEMP", timeout: 3_000)
+        snapshot.temperatureCelsius = ATResponseParser.parseModuleTemperature(temperature.output)
+        let battery = command("AT+CBC", timeout: 3_000)
+        snapshot.voltageVolts = ATResponseParser.parseCBCVoltage(battery.output)
+        refreshModuleTrafficCounters()
+        if snapshot.state == .connected {
+            publishSnapshot(snapshot)
+        }
+    }
+
+    private func refreshModuleTrafficCounters() {
+        if isModuleTrafficCounterSupported == nil {
+            let probe = command("AT+QGDCNT=?", timeout: 3_000)
+            isModuleTrafficCounterSupported = probe.isSuccess
+        }
+        guard isModuleTrafficCounterSupported == true else { return }
+        let query = command("AT+QGDCNT?", timeout: 3_000)
+        snapshot.moduleTrafficBytes = ATResponseParser.parseQGDCNT(query.output)
+    }
+
+    /// Airplane mode = AT+CFUN 0/1. While RF is off the module cannot do
+    /// calls, SMS or registration, so this is gated behind a confirmation in
+    /// the UI and refused during an active call.
+    func setAirplaneMode(_ enabled: Bool, completion: ((String?) -> Void)? = nil) {
+        queue.async { [weak self] in
+            guard let self else { return }
+            guard self.isOpen, !self.isShuttingDown else {
+                completion?(L10n.tr("模组未连接，无法切换飞行模式。"))
+                return
+            }
+            guard !self.callSnapshot.hasCall else {
+                completion?(L10n.tr("通话期间不能切换飞行模式。"))
+                return
+            }
+            let result = self.command(enabled ? "AT+CFUN=0" : "AT+CFUN=1", timeout: 15_000)
+            if result.isSuccess {
+                self.snapshot.isAirplaneModeActive = enabled
+                if enabled {
+                    self.snapshot.signalDBm = nil
+                    self.snapshot.registrationState = .unavailable
+                    self.snapshot.voiceRegistrationState = .unavailable
+                } else {
+                    self.needsSIMRefresh = true
+                }
+                self.publishSnapshot(self.snapshot)
+                self.needsSensorRefresh = true
+                completion?(nil)
+            } else {
+                completion?(result.error ?? L10n.tr("飞行模式切换失败，请稍后重试。"))
+            }
+        }
     }
 
     private func scheduleQDCInitializationRetry() {

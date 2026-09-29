@@ -1701,3 +1701,19 @@
 "模组已连接，但 macOS 侧尚未出现蜂窝数据网卡；请等待约 30 秒，若仍未出现请重新插拔模组或更换 USB 端口" = "Le module est connecté, mais aucune interface de données cellulaires n'est apparue dans macOS ; attendez environ 30 secondes, puis rebranchez le module ou essayez un autre port USB";
 "模组查询失败" = "Échec de la requête vers le module";
 "模组配置查询失败。" = "Échec de la requête de configuration du module.";
+
+/* Menu bar quick controls & module sensors */
+"模组未连接，无法切换飞行模式。" = "Le module n'est pas connecté ; le mode avion est indisponible.";
+"通话期间不能切换飞行模式。" = "Impossible de changer le mode avion pendant un appel.";
+"飞行模式切换失败，请稍后重试。" = "Échec du basculement en mode avion ; réessayez dans un instant.";
+"飞行模式已开启：模组射频已关闭，通话与短信暂停。" = "Mode avion activé : la RF du module est coupée, appels et SMS suspendus.";
+"飞行模式已关闭：模组正在恢复注册。" = "Mode avion désactivé : le module se réenregistre.";
+"快捷控制" = "Contrôles rapides";
+"自动录音" = "Enregistrement auto";
+"飞行模式" = "Mode avion";
+"开启飞行模式？" = "Activer le mode avion ?";
+"开启飞行模式" = "Activer le mode avion";
+"开启后模组射频将关闭，通话、短信和蜂窝数据都会中断，直到你重新关闭飞行模式。" = "La RF du module sera coupée ; appels, SMS et données cellulaires seront interrompus jusqu'à la désactivation du mode avion.";
+"模组温度" = "Température du module";
+"模组电压" = "Tension du module";
+"累计蜂窝流量（收 + 发）" = "Trafic cellulaire cumulé (reçu + envoyé)";

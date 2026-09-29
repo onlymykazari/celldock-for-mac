@@ -1704,3 +1704,19 @@
 "模组已连接，但 macOS 侧尚未出现蜂窝数据网卡；请等待约 30 秒，若仍未出现请重新插拔模组或更换 USB 端口" = "The module is connected, but no cellular data NIC has appeared in macOS; wait about 30 seconds, then re-plug the module or try another USB port if it still does not appear";
 "模组查询失败" = "Module query failed";
 "模组配置查询失败。" = "Module configuration query failed.";
+
+/* Menu bar quick controls & module sensors */
+"模组未连接，无法切换飞行模式。" = "The module is not connected; airplane mode is unavailable.";
+"通话期间不能切换飞行模式。" = "Airplane mode cannot change during a call.";
+"飞行模式切换失败，请稍后重试。" = "Airplane mode switch failed; try again shortly.";
+"飞行模式已开启：模组射频已关闭，通话与短信暂停。" = "Airplane mode on: module RF is off; calls and SMS are paused.";
+"飞行模式已关闭：模组正在恢复注册。" = "Airplane mode off: the module is re-registering.";
+"快捷控制" = "Quick Controls";
+"自动录音" = "Auto Record";
+"飞行模式" = "Airplane Mode";
+"开启飞行模式？" = "Turn on airplane mode?";
+"开启飞行模式" = "Turn On Airplane Mode";
+"开启后模组射频将关闭，通话、短信和蜂窝数据都会中断，直到你重新关闭飞行模式。" = "RF will be turned off; calls, SMS and cellular data are interrupted until airplane mode is turned off again.";
+"模组温度" = "Module temperature";
+"模组电压" = "Module voltage";
+"累计蜂窝流量（收 + 发）" = "Cumulative cellular traffic (received + sent)";

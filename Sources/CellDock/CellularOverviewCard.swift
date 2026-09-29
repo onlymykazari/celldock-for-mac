@@ -148,6 +148,8 @@ struct CellularOverviewCard: View {
                         Spacer(minLength: 0)
                         networkModeMenu
                     }
+
+                    sensorReadoutsRow
                 }
                 .layoutPriority(2)
             }
@@ -198,6 +200,66 @@ struct CellularOverviewCard: View {
                 .lineLimit(1)
                 .fixedSize(horizontal: true, vertical: false)
         }
+    }
+
+    /// Live module health readouts: temperature / voltage / cumulative
+    /// traffic, mirroring a phone's status card. Entirely hidden when the
+    /// firmware reports nothing, so unsupported modules lose nothing.
+    @ViewBuilder
+    private var sensorReadoutsRow: some View {
+        let temperature = displayedModem.temperatureCelsius
+        let voltage = displayedModem.voltageVolts
+        let usage = resolvedTrafficUsage
+        if temperature != nil || voltage != nil || usage != nil {
+            HStack(spacing: 14) {
+                if let temperature {
+                    sensorLabel(
+                        "\(Int(temperature.rounded()))°C",
+                        systemImage: "thermometer.medium",
+                        help: L10n.tr("模组温度")
+                    )
+                }
+                if let voltage {
+                    sensorLabel(
+                        String(format: "%.2f V", voltage),
+                        systemImage: "bolt",
+                        help: L10n.tr("模组电压")
+                    )
+                }
+                if let usage, usage.totalBytes > 0 {
+                    sensorLabel(
+                        formattedTrafficUsage(usage.totalBytes),
+                        systemImage: "arrow.up.arrow.down",
+                        help: L10n.tr("累计蜂窝流量（收 + 发）")
+                    )
+                }
+                Spacer(minLength: 0)
+            }
+            .font(.caption2.monospacedDigit())
+            .foregroundStyle(.secondary)
+        }
+    }
+
+    private var resolvedTrafficUsage: TrafficUsage? {
+        displayedModem.moduleIMEI.flatMap {
+            appState.trafficUsage(forModuleIMEI: $0)
+        }
+    }
+
+    private func sensorLabel(
+        _ text: String,
+        systemImage: String,
+        help: String
+    ) -> some View {
+        Label(text, systemImage: systemImage)
+            .lineLimit(1)
+            .help(help)
+    }
+
+    private func formattedTrafficUsage(_ bytes: UInt64) -> String {
+        let formatter = ByteCountFormatter()
+        formatter.countStyle = .decimal
+        return formatter.string(fromByteCount: Int64(bytes))
     }
 
     private var statusBadge: some View {

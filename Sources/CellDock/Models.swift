@@ -302,6 +302,16 @@ struct ModemSnapshot: Equatable {
     /// Bounded, visible auto-retry for failed configuration queries (R5).
     var configurationRetryAttempt = 0
     var configurationRetryExhausted = false
+    /// Module silicon temperature from AT+QTEMP, when supported. Nil = not
+    /// reported by this firmware; the UI hides the field instead of guessing.
+    var temperatureCelsius: Double?
+    /// Power voltage in volts from AT+CBC, when reported plausibly.
+    var voltageVolts: Double?
+    /// RF off (AT+CFUN=0, airplane mode). Nil = not queried yet.
+    var isAirplaneModeActive: Bool?
+    /// Module-accumulated traffic counters from AT+QGDCNT, when the firmware
+    /// supports them. Takes precedence over host-side accumulation.
+    var moduleTrafficBytes: TrafficUsage?
 
     func hasQueryFailure(_ field: ModemQueryFailure.Field) -> Bool {
         queryFailures.contains { $0.field == field }
