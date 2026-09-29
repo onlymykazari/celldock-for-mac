@@ -7,6 +7,7 @@ struct CellDockSettingsView: View {
         case general = "通用"
         case sounds = "声音"
         case communications = "蜂窝与通信"
+        case forwarding = "通知转发"
         case permissions = "通知与权限"
         case updates = "软件更新"
 
@@ -17,6 +18,7 @@ struct CellDockSettingsView: View {
             case .general: return "gearshape"
             case .sounds: return "speaker.wave.2.fill"
             case .communications: return "antenna.radiowaves.left.and.right"
+            case .forwarding: return "paperplane.fill"
             case .permissions: return "bell.badge"
             case .updates: return "arrow.triangle.2.circlepath"
             }
@@ -27,6 +29,7 @@ struct CellDockSettingsView: View {
             case .general: return L10n.tr("启动、外观与菜单栏行为")
             case .sounds: return L10n.tr("选择短信与来电使用的提示音")
             case .communications: return L10n.tr("查看模块状态并管理通话与短信处理")
+            case .forwarding: return L10n.tr("配置出站渠道，并选择要转发的通知")
             case .permissions: return L10n.tr("检查 CellDock 的系统访问权限")
             case .updates: return L10n.tr("检查版本并选择更新频道")
             }
@@ -37,6 +40,7 @@ struct CellDockSettingsView: View {
             case .general: return L10n.tr("外观、语言与启动")
             case .sounds: return L10n.tr("短信提示音与来电铃声")
             case .communications: return L10n.tr("通话、短信与转发")
+            case .forwarding: return L10n.tr("渠道与通知类型")
             case .permissions: return L10n.tr("通知与系统访问权限")
             case .updates: return L10n.tr("版本与更新频道")
             }
@@ -47,7 +51,7 @@ struct CellDockSettingsView: View {
     @ObservedObject private var contacts = SystemContactStore.shared
     @ObservedObject private var languageController = AppLanguageController.shared
     @ObservedObject private var updaterManager = UpdaterManager.shared
-    @ObservedObject private var smsForwarding = SMSForwardingStore.shared
+    @ObservedObject private var notificationForwarding = NotificationForwardingStore.shared
     @Binding private var sidebarWidth: CGFloat
     private let focusFirstItemRequest: Bool
     private let didHandleFocusFirstItemRequest: () -> Void
@@ -60,7 +64,7 @@ struct CellDockSettingsView: View {
     @State private var isConfirmingAutomaticRecording = false
     @State private var microphoneAuthorizationStatus =
         AVCaptureDevice.authorizationStatus(for: .audio)
-    @State private var presentedForwardingChannel: SMSForwardChannel?
+    @State private var presentedForwardingChannel: ForwardingChannelDraft?
     @FocusState private var listFocused: Bool
 
     init(
@@ -115,19 +119,7 @@ struct CellDockSettingsView: View {
             Text("通话接通后会自动录制双方的声音。请先确认已取得通话参与者同意，并遵守所在地法律法规。录音仅保存在这台 Mac。")
         }
         .sheet(item: $presentedForwardingChannel) { channel in
-            smsForwardingConfigSheet(for: channel)
-        }
-    }
-
-    @ViewBuilder
-    private func smsForwardingConfigSheet(for channel: SMSForwardChannel) -> some View {
-        switch channel {
-        case .bark:
-            BarkForwardingConfigSheet(store: smsForwarding)
-        case .feishu:
-            FeishuForwardingConfigSheet(store: smsForwarding)
-        case .dingtalk:
-            DingTalkForwardingConfigSheet(store: smsForwarding)
+            NotificationForwardingChannelSheet(channel: channel.channel, isNew: channel.isNew)
         }
     }
 
@@ -141,7 +133,7 @@ struct CellDockSettingsView: View {
 
                     settingsSidebarGroup(
                         L10n.tr("偏好设置"),
-                        categories: [.general, .sounds, .communications]
+                        categories: [.general, .sounds, .communications, .forwarding]
                     )
                     settingsSidebarGroup(
                         L10n.tr("系统"),
@@ -298,6 +290,8 @@ struct CellDockSettingsView: View {
             SoundSettingsView()
         case .communications:
             communicationSettings
+        case .forwarding:
+            forwardingSettings
         case .permissions:
             permissionSettings
         case .updates:
@@ -546,52 +540,163 @@ struct CellDockSettingsView: View {
                 }
                 .padding(16)
             }
+        }
+    }
 
-            settingsSection(title: L10n.tr("短信转发")) {
-                VStack(spacing: 0) {
-                    ForEach(Array(SMSForwardChannel.allCases.enumerated()), id: \.element) { index, channel in
-                        if index > 0 {
-                            Divider().padding(.horizontal, 16)
-                        }
-                        smsForwardingChannelRow(channel)
-                            .padding(16)
+    // MARK: 通知转发（渠道 + 通知类型）
+
+    private var forwardingSettings: some View {
+        VStack(spacing: 16) {
+            settingsSection(title: L10n.tr("转发哪些通知")) {
+                VStack(spacing: 12) {
+                    settingRow(
+                        title: L10n.tr("启用通知转发"),
+                        detail: L10n.tr("将勾选的通知 POST JSON 到指定渠道地址")
+                    ) {
+                        Toggle(
+                            "启用通知转发",
+                            isOn: Binding(
+                                get: { notificationForwarding.settings.isEnabled },
+                                set: { notificationForwarding.setMasterEnabled($0) }
+                            )
+                        )
+                        .labelsHidden()
+                        .toggleStyle(.adaptiveGlass)
                     }
+                    ForEach(ForwardingEventType.allCases) { event in
+                        Divider()
+                        settingRow(
+                            title: event.title,
+                            detail: event.detail
+                        ) {
+                            Toggle(
+                                event.title,
+                                isOn: Binding(
+                                    get: { notificationForwarding.settings.isEnabled &&
+                                        notificationForwarding.settings.enabledEvents.contains(event) },
+                                    set: { notificationForwarding.setEventEnabled($0, for: event) }
+                                )
+                            )
+                            .labelsHidden()
+                            .toggleStyle(.adaptiveGlass)
+                        }
+                    }
+                }
+            }
+
+            settingsSection(title: L10n.tr("出站渠道")) {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text(L10n.tr("Webhook 类型"))
+                        .font(.callout.weight(.semibold))
+                    Text(L10n.tr("可多选。点击类型添加一个渠道；请求体会按类型填入，可再自行修改。"))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    channelKindChips
+
+                    if notificationForwarding.channels.isEmpty {
+                        Text(L10n.tr("还没有配置渠道。点击上方类型添加第一个渠道。"))
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                            .padding(.top, 2)
+                    } else {
+                        VStack(spacing: 0) {
+                            ForEach(notificationForwarding.channels) { channel in
+                                Divider()
+                                forwardingChannelRow(channel)
+                            }
+                        }
+                    }
+                }
+                .padding(.top, 2)
+            }
+        }
+    }
+
+    private var channelKindChips: some View {
+        let kinds = ForwardingChannelKind.allCases
+        return VStack(alignment: .leading, spacing: 8) {
+            ForEach(0 ..< Int(ceil(Double(kinds.count) / 4)), id: \.self) { rowIndex in
+                let start = rowIndex * 4
+                let row = kinds.dropFirst(start).prefix(4)
+                HStack(spacing: 8) {
+                    ForEach(Array(row)) { kind in
+                        channelChip(kind)
+                    }
+                    Spacer(minLength: 0)
                 }
             }
         }
     }
 
-    private func smsForwardingChannelRow(_ channel: SMSForwardChannel) -> some View {
+    private func channelChip(_ kind: ForwardingChannelKind) -> some View {
+        Button {
+            let channel = ForwardingChannel(kind: kind)
+            presentedForwardingChannel = ForwardingChannelDraft(
+                channel: channel,
+                isNew: true
+            )
+        } label: {
+            Label(kind.title, systemImage: kind.systemImage)
+                .font(.caption.weight(.medium))
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(
+                    Color.accentColor.opacity(0.09),
+                    in: Capsule()
+                )
+        }
+        .buttonStyle(.plain)
+        .help(L10n.tr("添加%@渠道", kind.title))
+    }
+
+    private func forwardingChannelRow(_ channel: ForwardingChannel) -> some View {
         settingRow(
-            title: channel.title,
-            status: smsForwardingStatusText(for: channel),
-            statusColor: smsForwardingStatusColor(for: channel),
-            detail: channel.detail
+            title: channel.displayName,
+            status: forwardingChannelStatusText(for: channel),
+            statusColor: forwardingChannelStatusColor(for: channel),
+            detail: channel.kind.title
         ) {
             HStack(spacing: 8) {
-                Toggle(channel.title, isOn: Binding(
-                    get: { smsForwarding.isEnabled(channel) },
-                    set: { smsForwarding.setEnabled($0, for: channel) }
-                ))
+                Toggle(
+                    channel.displayName,
+                    isOn: Binding(
+                        get: { channel.isEnabled },
+                        set: { notificationForwarding.setChannelEnabled($0, for: channel.id) }
+                    )
+                )
                 .labelsHidden()
                 .toggleStyle(.adaptiveGlass)
 
                 Button(L10n.tr("配置…")) {
-                    presentedForwardingChannel = channel
+                    presentedForwardingChannel = ForwardingChannelDraft(
+                        channel: channel,
+                        isNew: false
+                    )
                 }
                 .adaptiveGlassButton()
                 .controlSize(.small)
+
+                Button(role: .destructive) {
+                    notificationForwarding.removeChannel(channel.id)
+                } label: {
+                    Image(systemName: "trash")
+                }
+                .adaptiveGlassButton()
+                .controlSize(.small)
+                .help(L10n.tr("删除渠道"))
             }
         }
     }
 
-    private func smsForwardingStatusText(for channel: SMSForwardChannel) -> String? {
-        guard let result = smsForwarding.lastResults[channel] else { return nil }
-        return result.isSuccess ? L10n.tr("上次转发成功") : L10n.tr("上次转发失败")
+    private func forwardingChannelStatusText(for channel: ForwardingChannel) -> String? {
+        guard let result = notificationForwarding.lastResults[channel.id] else { return nil }
+        return result.isSuccess
+            ? L10n.tr("上次转发成功")
+            : L10n.tr("上次转发失败")
     }
 
-    private func smsForwardingStatusColor(for channel: SMSForwardChannel) -> Color {
-        guard let result = smsForwarding.lastResults[channel] else { return .secondary }
+    private func forwardingChannelStatusColor(for channel: ForwardingChannel) -> Color {
+        guard let result = notificationForwarding.lastResults[channel.id] else { return .secondary }
         return result.isSuccess ? .green : .red
     }
 

@@ -688,6 +688,11 @@ final class AppState: ObservableObject {
             let previousSnapshot = self.modem
             let wasPhysicallyPresent = self.modem.state != .disconnected
             let wasDisconnected = self.modem.state == .disconnected
+            self.dispatchSystemStatusTransition(
+                from: previousSnapshot,
+                to: snapshot,
+                moduleID: self.activeCommunicationModuleID ?? .compatibilityPrimary
+            )
             if let locationID = snapshot.usbLocationID {
                 self.activeModemLocationID = locationID
             }
@@ -1089,9 +1094,57 @@ final class AppState: ObservableObject {
                 presentation: privacyPresentation
             )
             if !message.isOutgoing {
-                SMSForwardingService.shared.forward(message)
+                let context = forwardingContext(for: moduleID)
+                NotificationForwardingService.shared.forward(
+                    message,
+                    moduleName: context.moduleName,
+                    operatorName: context.operatorName
+                )
             }
         }
+    }
+
+    /// Shared context (module display name + operator) attached to forwarded
+    /// notifications.
+    private func forwardingContext(
+        for moduleID: CellularModuleID
+    ) -> (moduleName: String, operatorName: String?) {
+        let displayName = cellularModules.first { $0.id == moduleID }?.displayName
+            ?? L10n.tr("模组 %lld", Int64(1))
+        return (displayName, moduleSnapshot(for: moduleID).operatorName)
+    }
+
+    /// Rate limit for system-status forwards so restart storms cannot spam
+    /// webhook receivers.
+    private var lastSystemStatusForwardAt = Date.distantPast
+
+    private func dispatchSystemStatusTransition(
+        from previous: ModemSnapshot,
+        to current: ModemSnapshot,
+        moduleID: CellularModuleID
+    ) {
+        guard previous.state != current.state else { return }
+        let summary: String?
+        switch current.state {
+        case .connected:
+            summary = L10n.tr("模组已连接。")
+        case .disconnected:
+            summary = L10n.tr("模组已断开连接；请检查 USB 线缆或重新插入。")
+        case .error:
+            summary = L10n.tr("模组连接异常：%@", current.lastError ?? L10n.tr("未知错误"))
+        case .connecting:
+            summary = nil
+        }
+        guard let summary else { return }
+        guard Date().timeIntervalSince(lastSystemStatusForwardAt) >= 30 else { return }
+        lastSystemStatusForwardAt = Date()
+        let context = forwardingContext(for: moduleID)
+        NotificationForwardingService.shared.forwardSystemStatus(
+            summary,
+            moduleName: context.moduleName,
+            operatorName: context.operatorName,
+            signal: current.signalDBm.map { "\($0) dBm" }
+        )
     }
 
     private func handleCallSnapshot(
@@ -1120,6 +1173,12 @@ final class AppState: ObservableObject {
                         displayName: SystemContactStore.shared.displayName(for: completedCall.number),
                         presentation: privacyPresentation
                     )
+                    let context = forwardingContext(for: moduleID)
+                    NotificationForwardingService.shared.forwardMissedCall(
+                        completedCall,
+                        moduleName: context.moduleName,
+                        operatorName: context.operatorName
+                    )
                 }
                 return
             }
@@ -1129,6 +1188,12 @@ final class AppState: ObservableObject {
                         completedCall,
                         displayName: SystemContactStore.shared.displayName(for: completedCall.number),
                         presentation: privacyPresentation
+                    )
+                    let context = forwardingContext(for: moduleID)
+                    NotificationForwardingService.shared.forwardMissedCall(
+                        completedCall,
+                        moduleName: context.moduleName,
+                        operatorName: context.operatorName
                     )
                 }
                 return
@@ -1173,6 +1238,11 @@ final class AppState: ObservableObject {
                         },
                         presentation: privacyPresentation
                     )
+                    NotificationForwardingService.shared.forwardIncomingCall(
+                        number: taggedSnapshot.number,
+                        moduleName: cellularModules.first { $0.id == moduleID }?.displayName,
+                        operatorName: moduleSnapshot(for: moduleID).operatorName
+                    )
                 }
             }
             return
@@ -1185,6 +1255,12 @@ final class AppState: ObservableObject {
                 completedCall,
                 displayName: SystemContactStore.shared.displayName(for: completedCall.number),
                 presentation: privacyPresentation
+            )
+            let context = forwardingContext(for: moduleID)
+            NotificationForwardingService.shared.forwardMissedCall(
+                completedCall,
+                moduleName: context.moduleName,
+                operatorName: context.operatorName
             )
         }
 

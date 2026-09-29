@@ -3855,6 +3855,81 @@ do {
         "QGDCNT parsing did not produce module traffic counters"
     )
 
+    // MARK: Notification forwarding (template renderer + request building)
+
+    let forwardingContext = ForwardingEventContext(
+        type: .newMessage,
+        title: "[CellDock] 新短信",
+        content: "验证码 123456，\"注意\" 保密\n第二行",
+        sender: "10086",
+        operatorName: "中国移动",
+        signal: nil,
+        moduleName: "模组 1",
+        direction: "接收",
+        duration: nil
+    )
+    let feishuRendered = NotificationTemplateRenderer.render(
+        template: "",
+        variables: forwardingContext.variables,
+        channelKind: .feishu,
+        event: .newMessage
+    )
+    let feishuObject = (try? JSONSerialization.jsonObject(with: Data(feishuRendered.utf8))) as? [String: Any]
+    let feishuText = (feishuObject?["content"] as? [String: Any])?["text"] as? String
+    try expect(
+        feishuObject != nil &&
+            feishuText == "[CellDock] 新短信\n验证码 123456，\"注意\" 保密\n第二行",
+        "the feishu default template did not render valid JSON with escaped values"
+    )
+
+    let plainRendered = NotificationTemplateRenderer.render(
+        template: "title={{title}}",
+        variables: ["title": "a\"b{{content}}"],
+        channelKind: .custom,
+        event: .newMessage
+    )
+    try expect(
+        plainRendered == "title=a\"b{{content}}",
+        "plain templates must substitute verbatim and never re-expand values"
+    )
+
+    let qqRendered = NotificationTemplateRenderer.render(
+        template: "",
+        variables: forwardingContext.variables.merging(["target": "10086"]) { _, new in new },
+        channelKind: .qqPrivate,
+        event: .newMessage
+    )
+    let qqObject = (try? JSONSerialization.jsonObject(with: Data(qqRendered.utf8))) as? [String: Any]
+    try expect(
+        (qqObject?["user_id"] as? Int) == 10086 ||
+            Int(qqObject?["user_id"] as? String ?? "") == 10086,
+        "the QQ default template did not carry the numeric target id"
+    )
+
+    let dingRequest = try NotificationForwardingService.buildRequest(
+        kind: .dingtalk,
+        secrets: ForwardingChannelSecrets(token: "tok", secret: ""),
+        body: "{}"
+    )
+    try expect(
+        dingRequest.url?.absoluteString.hasPrefix("https://oapi.dingtalk.com/robot/send?access_token=tok") == true,
+        "the dingtalk request URL was not built from the access token"
+    )
+    let qqRequest = try NotificationForwardingService.buildRequest(
+        kind: .qqGroup,
+        secrets: ForwardingChannelSecrets(url: "http://127.0.0.1:5700/", token: "secret-token"),
+        body: "{}"
+    )
+    try expect(
+        qqRequest.url?.absoluteString == "http://127.0.0.1:5700/send_group_msg" &&
+            qqRequest.value(forHTTPHeaderField: "Authorization") == "Bearer secret-token",
+        "the OneBot request did not target send_group_msg with bearer auth"
+    )
+    try expect(
+        NotificationForwardingService.parsedHeaders("X-A: 1\nbad-line\nX-B:2").count == 2,
+        "custom header parsing did not keep only well-formed lines"
+    )
+
     print("CellDock self-tests passed (calls, PDU/UDH, SOCKS5, VoWiFi, buffering, storage, merge, init-robustness).")
 } catch {
     fputs("Self-test failed: \(error)\n", stderr)

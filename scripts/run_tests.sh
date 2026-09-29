@@ -46,6 +46,11 @@ swiftc \
   "$ROOT/Sources/CellDockNetworkHelper/NetworkHelperState.swift" \
   "$ROOT/Sources/CellDock/Models.swift" \
   "$ROOT/Sources/CellDock/TrafficUsageStore.swift" \
+  "$ROOT/Sources/CellDock/SMSForwardingSigning.swift" \
+  "$ROOT/Sources/CellDock/NotificationForwardingModels.swift" \
+  "$ROOT/Sources/CellDock/NotificationForwardingStore.swift" \
+  "$ROOT/Sources/CellDock/NotificationTemplateRenderer.swift" \
+  "$ROOT/Sources/CellDock/NotificationForwardingService.swift" \
   "$ROOT/Sources/CellDock/QADBKeyDeriver.swift" \
   "$ROOT/Sources/CellDock/MessageConversation.swift" \
   "$ROOT/Sources/CellDock/CellularLinkRecovery.swift" \
