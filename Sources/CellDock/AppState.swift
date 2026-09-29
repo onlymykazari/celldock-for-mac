@@ -2645,6 +2645,45 @@ final class AppState: ObservableObject {
         }
     }
 
+    /// One-shot module SMS storage wipe (DJ4Hub parity): switch the message
+    /// storage to ME, delete everything in it (`AT+CMGD=1,4`), then restore
+    /// the previously selected storage so CNMI routing keeps working. The
+    /// completion receives nil on success, otherwise a user-facing message.
+    func clearModuleMessageStorage(
+        via requestedModuleID: CellularModuleID? = nil,
+        completion: @escaping (String?) -> Void
+    ) {
+        let moduleID = communicationModuleID(requested: requestedModuleID)
+        executeAT("AT+CPMS?", via: moduleID) { [weak self] first in
+            let previousStorage = Self.currentMessageStorage(fromOutput: first.output) ?? "SM"
+            self?.executeAT("AT+CPMS=\"ME\",\"ME\",\"ME\"", via: moduleID) { switched in
+                guard switched.output.uppercased().contains("OK") else {
+                    completion(L10n.tr("切换到 ME 存储失败：%@", switched.error ?? L10n.tr("无响应")))
+                    return
+                }
+                self?.executeAT("AT+CMGD=1,4", via: moduleID) { wiped in
+                    self?.executeAT("AT+CPMS=\"\(previousStorage)\"", via: moduleID) { _ in
+                        completion(wiped.output.uppercased().contains("OK")
+                            ? nil
+                            : L10n.tr("清空 ME 存储失败：%@", wiped.error ?? L10n.tr("无响应")))
+                    }
+                }
+            }
+        }
+    }
+
+    private static func currentMessageStorage(fromOutput output: String) -> String? {
+        for line in output.split(separator: "\n") where line.uppercased().contains("+CPMS:") {
+            let payload = line.replacingOccurrences(of: "+CPMS:", with: "").trimmingCharacters(in: .whitespaces)
+            let fields = payload.split(separator: ",", omittingEmptySubsequences: false)
+            if let first = fields.first {
+                let storage = first.trimmingCharacters(in: CharacterSet(charactersIn: "\" "))
+                if !storage.isEmpty { return storage }
+            }
+        }
+        return nil
+    }
+
     func sendSMS(
         to destination: String,
         body: String,
@@ -2891,7 +2930,7 @@ final class AppState: ObservableObject {
         }
     }
 
-    private func presentTransientMessage(_ message: String, isError: Bool = false) {
+    func presentTransientMessage(_ message: String, isError: Bool = false) {
         transientDismissalTask?.cancel()
         transientMessage = message
         transientIsError = isError

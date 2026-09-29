@@ -39,6 +39,10 @@ struct SIMManagementView: View {
     @State private var isConfirmingCloseAllCellularNetworks = false
     @State private var overviewThroughput = NetworkThroughput.zero
     @State private var previousOverviewCounters: NetworkInterfaceByteCounters?
+    @State private var isRunningDiagnostics = false
+    @State private var diagnosticsSections: [(title: String, output: String)]?
+    @State private var isConfirmingMessageStorageWipe = false
+    @State private var isClearingModuleMessages = false
     @FocusState private var listFocused: Bool
 
     var body: some View {
@@ -509,6 +513,7 @@ struct SIMManagementView: View {
                         esimProfilesCard
                     } else {
                         moduleInformationCard
+                        modemDiagnosticsCard
                     }
                 }
                 .frame(maxWidth: .infinity)
@@ -1490,12 +1495,183 @@ struct SIMManagementView: View {
         .adaptiveGlassCard()
     }
 
+    // MARK: 模组诊断 + 流量统计 + 短信存储清理（DJ4Hub parity）
+
+    private var modemDiagnosticsCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text(L10n.tr("网络诊断"))
+                    .font(.headline)
+                Spacer()
+                if isRunningDiagnostics {
+                    ProgressView().controlSize(.small)
+                }
+                Button(L10n.tr("刷新诊断")) {
+                    runDiagnostics()
+                }
+                .adaptiveGlassButton()
+                .controlSize(.small)
+                .disabled(isRunningDiagnostics)
+            }
+
+            if let diagnosticsSections {
+                ForEach(diagnosticsSections, id: \.title) { section in
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(section.title)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                        Text(section.output)
+                            .font(.caption.monospaced())
+                            .textSelection(.enabled)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .padding(.vertical, 2)
+                }
+            } else {
+                Text(L10n.tr("点击「刷新诊断」读取 PDP/APN 上下文、数据激活状态、模组地址与 USB 配置。"))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Divider()
+
+            trafficSection
+
+            Divider()
+
+            messageStorageCleanupSection
+        }
+        .adaptiveGlassCard()
+        .confirmationDialog(
+            L10n.tr("清空模组短信存储？"),
+            isPresented: $isConfirmingMessageStorageWipe,
+            titleVisibility: .visible
+        ) {
+            Button(L10n.tr("清空模组短信"), role: .destructive) {
+                wipeModuleMessageStorage()
+            }
+            Button(L10n.tr("取消"), role: .cancel) {}
+        } message: {
+            Text(L10n.tr("模组 ME 存储中的所有短信将被永久删除，无法恢复。"))
+        }
+    }
+
+    private func wipeModuleMessageStorage() {
+        isClearingModuleMessages = true
+        appState.clearModuleMessageStorage(via: selectedModuleID) { errorMessage in
+            isClearingModuleMessages = false
+            if let errorMessage {
+                appState.presentTransientMessage(errorMessage, isError: true)
+            } else {
+                appState.presentTransientMessage(L10n.tr("模组短信存储已清空。"))
+            }
+        }
+    }
+
+    private var trafficSection: some View {
+        let usage = selectedModule?.modem.moduleIMEI.flatMap {
+            appState.trafficUsage(forModuleIMEI: $0)
+        }
+        return VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text(L10n.tr("累计流量"))
+                    .font(.headline)
+                Spacer()
+                if let imei = selectedModule?.modem.moduleIMEI {
+                    Button(L10n.tr("清零")) {
+                        appState.resetTrafficUsage(forModuleIMEI: imei)
+                    }
+                    .adaptiveGlassButton()
+                    .controlSize(.small)
+                }
+            }
+            if let usage {
+                HStack(spacing: 16) {
+                    Label(
+                        ByteCountFormatter.string(fromByteCount: Int64(usage.receivedBytes), countStyle: .decimal),
+                        systemImage: "arrow.down"
+                    )
+                    Label(
+                        ByteCountFormatter.string(fromByteCount: Int64(usage.sentBytes), countStyle: .decimal),
+                        systemImage: "arrow.up"
+                    )
+                    Spacer()
+                }
+                .font(.callout.monospacedDigit())
+                .foregroundStyle(.secondary)
+            } else {
+                Text(L10n.tr("模组连接后开始累计流量。"))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    private var messageStorageCleanupSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(L10n.tr("模组短信存储"))
+                .font(.headline)
+            Text(L10n.tr("删除模组 ME 存储中的全部短信（AT+CPMS/CMGD），随后恢复原存储。不影响本机已保存的短信。"))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            HStack {
+                Button(role: .destructive) {
+                    isConfirmingMessageStorageWipe = true
+                } label: {
+                    if isClearingModuleMessages {
+                        ProgressView().controlSize(.small)
+                    } else {
+                        Text(L10n.tr("清空模组短信"))
+                    }
+                }
+                .adaptiveGlassButton()
+                .controlSize(.small)
+                .disabled(isClearingModuleMessages)
+                Spacer()
+            }
+        }
+    }
+
+    private func runDiagnostics() {
+        guard !isRunningDiagnostics else { return }
+        isRunningDiagnostics = true
+        let commands: [(title: String, command: String)] = [
+            ("联网模式", "AT+QCFG=\"usbnet\""),
+            ("USB 配置", "AT+QCFG=\"USBCFG\""),
+            ("PDP 上下文", "AT+CGDCONT?"),
+            ("PDP 激活", "AT+CGACT?"),
+            ("模组地址", "AT+CGPADDR=1"),
+        ]
+        runDiagnosticChain(commands, index: 0, collected: [])
+    }
+
+    private func runDiagnosticChain(
+        _ commands: [(title: String, command: String)],
+        index: Int,
+        collected: [(title: String, output: String)]
+    ) {
+        guard index < commands.count else {
+            diagnosticsSections = collected
+            isRunningDiagnostics = false
+            return
+        }
+        appState.executeAT(commands[index].command, via: selectedModuleID) { result in
+            let lines = result.output
+                .split(separator: "\n")
+                .map { $0.trimmingCharacters(in: .whitespaces) }
+                .filter { !$0.isEmpty && $0.uppercased() != "OK" && !$0.uppercased().hasPrefix("AT+") }
+            let output = lines.isEmpty
+                ? L10n.tr("无响应%@", result.error.map { "：\($0)" } ?? "")
+                : lines.joined(separator: "\n")
+            runDiagnosticChain(commands, index: index + 1, collected: collected + [(commands[index].title, output)])
+        }
+    }
+
     private func informationRow(
         title: String,
         value: String,
         valueColor: Color = .secondary
-    ) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 16) {
+    ) -> some View {        HStack(alignment: .firstTextBaseline, spacing: 16) {
             Text(L10n.tr(title))
                 .foregroundStyle(.primary)
             Spacer(minLength: 20)

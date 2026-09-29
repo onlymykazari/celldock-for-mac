@@ -1804,3 +1804,24 @@
 "语音信箱在通话音频可用时工作：响铃超时后自动接听并录音，通话结束（对方挂断或到达最长时长）后保存留言。跟随专注模式依赖系统状态探测；无法读取状态时语音信箱不会自动接管。" = "Voicemail works when call audio is available: it answers after the ring timeout, records, and saves the message when the call ends (caller hangs up or the cap is reached). Following Focus relies on system-state probing; when the state is unreadable voicemail never takes over.";
 "语音信箱留言" = "Voicemail message";
 "来电已转入语音信箱并录制留言，点击查看。" = "A call went to voicemail and a message was recorded; click to view.";
+
+/* Module diagnostics / traffic / SMS storage wipe (DJ4Hub parity) */
+"网络诊断" = "Network Diagnostics";
+"刷新诊断" = "Refresh";
+"点击「刷新诊断」读取 PDP/APN 上下文、数据激活状态、模组地址与 USB 配置。" = "Click Refresh to read PDP/APN contexts, data activation state, the module address and the USB configuration.";
+"PDP 上下文" = "PDP contexts";
+"PDP 激活" = "PDP activation";
+"模组地址" = "Module address";
+"无响应%@" = "No response%@";
+"累计流量" = "Cumulative traffic";
+"清零" = "Reset";
+"模组连接后开始累计流量。" = "Traffic accumulates once the module is connected.";
+"模组短信存储" = "Module SMS storage";
+"删除模组 ME 存储中的全部短信（AT+CPMS/CMGD），随后恢复原存储。不影响本机已保存的短信。" = "Deletes every SMS in the module's ME storage (AT+CPMS/CMGD), then restores the original storage. Messages saved on this Mac are untouched.";
+"清空模组短信" = "Wipe module SMS";
+"清空模组短信存储？" = "Wipe the module SMS storage?";
+"模组 ME 存储中的所有短信将被永久删除，无法恢复。" = "Every SMS in the module's ME storage will be permanently deleted; this cannot be undone.";
+"模组短信存储已清空。" = "Module SMS storage wiped.";
+"切换到 ME 存储失败：%@" = "Failed to switch to ME storage: %@";
+"清空 ME 存储失败：%@" = "Failed to wipe ME storage: %@";
+"无响应" = "no response";
