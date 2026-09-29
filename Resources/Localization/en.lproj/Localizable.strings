@@ -1684,3 +1684,23 @@
 "配置飞书机器人" = "Configure Feishu Bot";
 "钉钉" = "DingTalk";
 "飞书" = "Feishu";
+
+/* Doc 16 init robustness (R1-R5) */
+"AT 握手" = "AT handshake";
+"模组身份" = "Module identity";
+"USB 配置" = "USB configuration";
+"短信通道" = "Messaging";
+"语音组件" = "Voice component";
+"已停止自动重试；请重新插拔模组、更换 USB 端口，或在 AT 控制台手动检查。" = "Automatic retry has stopped; re-plug the module, try another USB port, or check manually in the AT console.";
+"CellDock 将自动重试（%lld/%lld）。" = "CellDock will retry automatically (%lld/%lld).";
+"模组身份查询失败：AT+CGSN 未返回 IMEI，已停止初始化。" = "Module identity query failed: AT+CGSN returned no IMEI, initialization stopped.";
+"命令超时（%lld 秒无响应），模组内部服务可能未启动" = "Command timed out (no response within %lld seconds); the module's internal service may not be running";
+"模组返回错误：%@" = "Module returned an error: %@";
+"命令未返回有效响应" = "Command returned no valid response";
+"正在准备通话组件…" = "Preparing call component…";
+"初始化中（%lld/%lld · %@）" = "Initializing (%lld/%lld · %@)";
+"网卡未建立" = "Data NIC missing";
+"数据网卡未建立" = "Cellular data NIC not established";
+"模组已连接，但 macOS 侧尚未出现蜂窝数据网卡；请等待约 30 秒，若仍未出现请重新插拔模组或更换 USB 端口" = "The module is connected, but no cellular data NIC has appeared in macOS; wait about 30 seconds, then re-plug the module or try another USB port if it still does not appear";
+"模组查询失败" = "Module query failed";
+"模组配置查询失败。" = "Module configuration query failed.";

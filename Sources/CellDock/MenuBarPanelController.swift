@@ -402,6 +402,7 @@ final class MenuBarPanelController: NSObject, NSWindowDelegate {
         case .disabled: dataStatus = L10n.tr("蜂窝数据已关闭")
         case .waitingForModem: dataStatus = L10n.tr("蜂窝数据等待模组")
         case .starting: dataStatus = L10n.tr("蜂窝数据连接中")
+        case .interfaceMissing: dataStatus = L10n.tr("数据网卡未建立")
         case .linkDown: dataStatus = L10n.tr("ECM 链路中断")
         case .interfaceReady: dataStatus = L10n.tr("ECM 接口已连接")
         case .available: dataStatus = L10n.tr("蜂窝数据可用")

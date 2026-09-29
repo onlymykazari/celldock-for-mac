@@ -224,6 +224,7 @@ final class NetworkServiceController {
         }
         let liveInterface = findLiveModemInterface()
         let liveService = findLiveModemService(in: networkSet)
+        invalidateStaleServiceRecordIfNeeded(in: networkSet)
         let service = liveService ?? recordedService(in: networkSet) ?? namedDisplayService(in: networkSet)
         guard let service else {
             return CellularNetworkStatus(
@@ -357,6 +358,23 @@ final class NetworkServiceController {
             (SCNetworkServiceGetServiceID($0) as String?) == record.serviceID &&
                 (SCNetworkServiceGetInterface($0).flatMap { SCNetworkInterfaceGetBSDName($0) as String? }) == record.bsdName &&
                 matchesPreferredModem(usbIdentity(forBSDName: record.bsdName))
+        }
+    }
+
+    /// A record pointing at a service that no longer exists (e.g. it named
+    /// `en18` before the module re-enumerated as `en21`) must be dropped;
+    /// otherwise it pins nothing but also never clears, and stale-identity
+    /// hinting keeps referring to a ghost interface (doc 16 R4).
+    private func invalidateStaleServiceRecordIfNeeded(in networkSet: SCNetworkSet) {
+        guard let record = loadServiceRecord(),
+              (SCNetworkSetGetSetID(networkSet) as String?) == record.setID else {
+            return
+        }
+        let serviceExists = services(in: networkSet).contains {
+            (SCNetworkServiceGetServiceID($0) as String?) == record.serviceID
+        }
+        if !serviceExists {
+            UserDefaults.standard.removeObject(forKey: serviceRecordKey)
         }
     }
 

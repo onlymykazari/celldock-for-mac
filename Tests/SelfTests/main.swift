@@ -3648,7 +3648,184 @@ do {
         // Expected.
     }
 
-    print("CellDock self-tests passed (calls, PDU/UDH, SOCKS5, VoWiFi, buffering, storage, merge).")
+    // MARK: Doc 16 — init robustness (R1/R2/R4/R5 failure injection)
+
+    // R2: the staged init exposes six named phases with labels.
+    try expect(
+        ModemInitializationStage.allCases.count == 6 &&
+            ModemInitializationStage.allCases.enumerated().allSatisfy { index, stage in
+                stage.rawValue == index && !stage.localizedLabel.isEmpty
+            },
+        "modem initialization stages did not form a labeled 6-stage progression"
+    )
+
+    func makeConnectedModemSnapshot() -> ModemSnapshot {
+        var modem = ModemSnapshot(state: .connected)
+        modem.usbIdentity = "2C7C:0125"
+        modem.usbConfiguration = ModemUSBConfiguration.cellDockFullTarget
+        modem.usbNetMode = 1
+        modem.simState = .ready
+        modem.registrationState = .registered
+        return modem
+    }
+
+    // R1: a recorded configuration-query failure is terminal. It must never
+    // surface as "initializing" just because usbnet/USBCFG are still nil —
+    // this is the permanent-"初始化中" bug shape.
+    var queryFailedSnapshot = makeConnectedModemSnapshot()
+    queryFailedSnapshot.usbNetMode = nil
+    queryFailedSnapshot.queryFailures = [
+        ModemQueryFailure(
+            field: .usbNet,
+            command: "AT+QCFG=\"usbnet\"",
+            reason: "命令超时（3 秒无响应），模组内部服务可能未启动"
+        )
+    ]
+    guard case .queryFailed = queryFailedSnapshot.initialSetupState else {
+        throw SelfTestFailure.failed(
+            "a recorded QCFG failure did not produce the terminal queryFailed state"
+        )
+    }
+    try expect(
+        queryFailedSnapshot.operationalState == .failed,
+        "a recorded QCFG failure did not map to the failed operational state"
+    )
+    let queryFailedSummary = queryFailedSnapshot.configurationFailureSummary ?? ""
+    try expect(
+        queryFailedSummary.contains("AT+QCFG=\"usbnet\""),
+        "the query-failure summary omitted the failing command"
+    )
+
+    // R5: the retry state is visible and bounded — attempts count up, then
+    // the summary flips to "stopped retrying".
+    queryFailedSnapshot.configurationRetryAttempt = 2
+    try expect(
+        (queryFailedSnapshot.configurationFailureSummary ?? "").contains("2/3"),
+        "the in-flight retry round was not surfaced in the failure summary"
+    )
+    queryFailedSnapshot.configurationRetryExhausted = true
+    try expect(
+        (queryFailedSnapshot.configurationFailureSummary ?? "").contains("已停止自动重试"),
+        "exhausted retries were not surfaced as stopped in the failure summary"
+    )
+    try expect(
+        ModemConfigurationQueryRetryPolicy.delay(forCompletedAttempts: 0) == 5 &&
+            ModemConfigurationQueryRetryPolicy.delay(forCompletedAttempts: 1) == 10 &&
+            ModemConfigurationQueryRetryPolicy.delay(forCompletedAttempts: 2) == 30 &&
+            ModemConfigurationQueryRetryPolicy.delay(forCompletedAttempts: 3) == nil &&
+            ModemConfigurationQueryRetryPolicy.maximumAttempts == 3,
+        "configuration query retry delays were unbounded or misconfigured"
+    )
+
+    // R1 contrast: nil results with *no* recorded failure still mean "query
+    // in progress" — the two situations must stay distinguishable.
+    var stillInspecting = makeConnectedModemSnapshot()
+    stillInspecting.usbNetMode = nil
+    guard case .inspecting = stillInspecting.initialSetupState else {
+        throw SelfTestFailure.failed(
+            "an unqueried usbnet mode no longer reports the in-progress inspecting state"
+        )
+    }
+    try expect(
+        stillInspecting.operationalState == .initializing,
+        "an in-progress query did not keep the initializing operational state"
+    )
+
+    // R1: USBCFG failures on the target identity must also land in
+    // queryFailed instead of unsupportedIdentity/inspecting.
+    var usbConfigFailed = makeConnectedModemSnapshot()
+    usbConfigFailed.usbConfiguration = nil
+    usbConfigFailed.usbNetMode = nil
+    usbConfigFailed.queryFailures = [
+        ModemQueryFailure(
+            field: .usbConfiguration,
+            command: "AT+QCFG=\"USBCFG\"",
+            reason: "模组返回错误：+CME ERROR: operation not allowed"
+        )
+    ]
+    guard case .queryFailed = usbConfigFailed.initialSetupState else {
+        throw SelfTestFailure.failed(
+            "a failed USBCFG query was misreported instead of queryFailed"
+        )
+    }
+
+    // Successful queries keep their derived states.
+    var ecmNeeded = makeConnectedModemSnapshot()
+    ecmNeeded.usbNetMode = 0
+    try expect(
+        ecmNeeded.initialSetupState == .needsECM &&
+            ecmNeeded.operationalState == .configurationRequired,
+        "usbnet=0 no longer derives the needsECM setup state"
+    )
+
+    // R4: a ready modem with no macOS-side data NIC is a diagnosable
+    // interface-missing state, never an eternal "starting"/"connecting".
+    let interfaceMissingState = CellularDataConnectionPolicy.state(
+        modem: makeConnectedModemSnapshot(),
+        network: CellularNetworkStatus(
+            serviceID: "svc-1",
+            serviceName: "QDC507",
+            higherPriorityServiceName: nil,
+            bsdName: nil,
+            isEnabled: true,
+            isActive: false,
+            isLinkActive: false,
+            isHardwarePresent: false
+        ),
+        isPresentedEnabled: true,
+        isChangingNetwork: false,
+        isRecovering: false
+    )
+    try expect(
+        interfaceMissingState == .interfaceMissing,
+        "a missing ECM NIC was not reported as interfaceMissing"
+    )
+
+    // R4 contrast: with the NIC present but no carrier the existing linkDown
+    // semantics must be preserved.
+    let linkDownState = CellularDataConnectionPolicy.state(
+        modem: makeConnectedModemSnapshot(),
+        network: CellularNetworkStatus(
+            serviceID: "svc-1",
+            serviceName: "QDC507",
+            higherPriorityServiceName: nil,
+            bsdName: "en5",
+            isEnabled: true,
+            isActive: false,
+            isLinkActive: false,
+            isHardwarePresent: true
+        ),
+        isPresentedEnabled: true,
+        isChangingNetwork: false,
+        isRecovering: false
+    )
+    try expect(
+        linkDownState == .linkDown(isRetrying: true),
+        "a carrier-less ECM link was not reported as linkDown(retrying)"
+    )
+
+    let availableState = CellularDataConnectionPolicy.state(
+        modem: makeConnectedModemSnapshot(),
+        network: CellularNetworkStatus(
+            serviceID: "svc-1",
+            serviceName: "QDC507",
+            higherPriorityServiceName: nil,
+            bsdName: "en5",
+            isEnabled: true,
+            isActive: true,
+            isLinkActive: true,
+            isHardwarePresent: true
+        ),
+        isPresentedEnabled: true,
+        isChangingNetwork: false,
+        isRecovering: false
+    )
+    try expect(
+        availableState == .available,
+        "an active ECM link with a ready SIM did not report available"
+    )
+
+    print("CellDock self-tests passed (calls, PDU/UDH, SOCKS5, VoWiFi, buffering, storage, merge, init-robustness).")
 } catch {
     fputs("Self-test failed: \(error)\n", stderr)
     exit(1)

@@ -1680,6 +1680,7 @@ struct SIMManagementView: View {
         case .disabled: return L10n.tr("已关闭")
         case .waitingForModem: return L10n.tr("等待模块")
         case .starting: return L10n.tr("连接中")
+        case .interfaceMissing: return L10n.tr("网卡未建立")
         case .linkDown: return L10n.tr("链路中断")
         case .interfaceReady: return L10n.tr("接口已连接")
         case .available: return L10n.tr("数据可用")
@@ -1692,6 +1693,7 @@ struct SIMManagementView: View {
         switch selectedConnectionState {
         case .disabled: return .secondary
         case .waitingForModem, .starting, .recovering: return .blue
+        case .interfaceMissing: return .orange
         case .linkDown: return .orange
         case .interfaceReady: return .orange
         case .available: return .green
@@ -1707,6 +1709,8 @@ struct SIMManagementView: View {
             return L10n.tr("模块就绪后自动建立蜂窝数据连接")
         case .starting:
             return L10n.tr("正在等待 ECM 链路与网络地址")
+        case .interfaceMissing:
+            return L10n.tr("模组已连接，但 macOS 侧尚未出现蜂窝数据网卡；请等待约 30 秒，若仍未出现请重新插拔模组或更换 USB 端口")
         case let .linkDown(isRetrying):
             return isRetrying
                 ? L10n.tr("ECM 载波未建立，正在自动重试")

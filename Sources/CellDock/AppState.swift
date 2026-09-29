@@ -2676,6 +2676,8 @@ final class AppState: ObservableObject {
             } else if !hasCompletedInitialSetup {
                 presentInitialSetupIfNeeded()
             }
+        case .queryFailed:
+            presentInitialSetupIfNeeded(forUninitializedModule: true)
         }
     }
 
@@ -2698,7 +2700,7 @@ final class AppState: ObservableObject {
             case .inspecting:
                 self.scheduleInitialSetupPromptIfNeeded(afterNanoseconds: 1_500_000_000)
             case .insertModule, .needsIdentityConversion, .needsECM, .unsupportedIdentity,
-                 .unsupportedUSBConfiguration, .unsupportedUSBNetMode, .failed:
+                 .unsupportedUSBConfiguration, .unsupportedUSBNetMode, .failed, .queryFailed:
                 self.presentInitialSetupIfNeeded()
             }
         }

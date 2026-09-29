@@ -151,6 +151,9 @@ final class ModemService {
     private var isShuttingDown = false
     private var qdcInitializationRetryGeneration: UInt64 = 0
     private var qdcInitializationRetryAttempts = 0
+    private var configurationQueryRetryGeneration: UInt64 = 0
+    private var configurationQueryRetryAttempts = 0
+    private var voicePreparationGeneration: UInt64 = 0
 
     init(locationID: UInt32? = nil) {
         preferredLocationID = locationID
@@ -2739,8 +2742,8 @@ final class ModemService {
 
     private func initializeConnectedModem() {
         guard let modem else { return }
-        let isRestartReconnect = expectedRestartStartedAt != nil
         cancelQDCInitializationRetry()
+        cancelConfigurationQueryRetry()
         didQuerySIMIdentity = false
         let usbLocationID = celldock_modem_location_id(modem)
         let usbNames = ModemUSBIdentityResolver.names(for: usbLocationID)
@@ -2750,7 +2753,7 @@ final class ModemService {
         )
         snapshot = ModemSnapshot(
             state: .connecting,
-            lifecyclePhase: isRestartReconnect ? .reconnecting : .normal,
+            lifecyclePhase: expectedRestartStartedAt != nil ? .reconnecting : .normal,
             usbIdentity: String(format: "%04X:%04X", celldock_modem_vendor_id(modem), celldock_modem_product_id(modem)),
             usbLocationID: usbLocationID,
             usbRegistryID: celldock_modem_registry_id(modem),
@@ -2768,6 +2771,9 @@ final class ModemService {
         beginSIMInitialization()
         publishSnapshot(snapshot)
 
+        // Stage 1/6 — AT handshake (fatal). Without an AT surface nothing
+        // else can work, so this keeps its hard failure exit.
+        setInitializationStage(.atHandshake)
         let handshake = command("AT", timeout: 2_000)
         guard handshake.isSuccess else {
             if isExpectingModuleRestart {
@@ -2784,9 +2790,11 @@ final class ModemService {
             resetSMSConnectionState()
             return
         }
-
         _ = command("ATE0", timeout: 2_000)
         _ = command("AT+CMEE=2", timeout: 2_000)
+
+        // Stage 2/6 — identity (fatal on IMEI, degrade on firmware string).
+        setInitializationStage(.identity)
         let moduleIdentity = command("AT+CGSN", timeout: 3_000)
         snapshot.moduleIMEI = ATResponseParser.parseIMEI(moduleIdentity.output)
         _ = command("AT+CLIP=1", timeout: 2_000)
@@ -2799,101 +2807,31 @@ final class ModemService {
             }
             .joined(separator: " ")
         snapshot.firmwareVersion = firmwareIdentity.isEmpty ? nil : firmwareIdentity
-        let pcmCapability: CommandResult? = hardwareFamily == .quectelNativeVoice
-            ? command("AT+QPCMV=?", timeout: 3_000)
-            : nil
-        let supportsRawPCM = pcmCapability?.isSuccess == true &&
-            CallATParser.testResponseSupportsRawPCM(pcmCapability?.output ?? "") &&
-            modemLocationID != 0
-        var mediaAvailable = false
-        var mediaError: String?
-        var shouldRetryQDCInitialization = false
-        moduleVoiceRuntime = nil
-        switch CallATParser.preferredMediaBackend(
-            hardwareFamily: hardwareFamily,
-            supportsRawPCM: supportsRawPCM,
-            hasUSBLocation: modemLocationID != 0
-        ) {
-        case .qdcModuleBridge:
-            do {
-                let runtime = try ModuleVoiceRuntime(locationID: modemLocationID)
-                _ = try runtime.prepare()
-                // CLCC was confirmed empty before initialization. Clear any
-                // helper/route left behind by a prior app crash or USB-only
-                // unplug while the module kept external power.
-                try runtime.stopBridge()
-                moduleVoiceRuntime = runtime
-                callMediaBackend = .qdcUAC
-                mediaAvailable = true
-                snapshot.voiceCapability = .supported(
-                    backend: .injectedQDC507,
-                    verified: false
-                )
-            } catch {
-                callMediaBackend = .none
-                mediaError = L10n.error("QDC507 通话组件尚不可用：%@", underlying: error)
-                snapshot.voiceCapability = .initializationFailed(
-                    reason: mediaError ?? L10n.tr("Baiwang 语音组件初始化失败。")
-                )
-                shouldRetryQDCInitialization = ADBModuleController.isInterfaceBusyError(error)
-            }
-        case .qpcmv:
-            let reset = command("AT+QPCMV=0", timeout: 3_000)
-            if reset.isSuccess {
-                callMediaBackend = .qpcmv
-                mediaAvailable = true
-                snapshot.voiceCapability = .supported(
-                    backend: .nativeQPCMV,
-                    verified: false
-                )
-            } else {
-                callMediaBackend = .none
-                mediaError = reset.error ?? L10n.tr("无法重置 USB 语音会话。")
-                snapshot.voiceCapability = .initializationFailed(
-                    reason: mediaError ?? L10n.tr("原生 QPCMV 初始化失败。")
-                )
-            }
-        case .none:
-            callMediaBackend = .none
-            switch hardwareFamily {
-            case .quectelNativeVoice:
-                if let pcmCapability, pcmCapability.isSuccess {
-                    snapshot.voiceCapability = .unsupported(
-                        reason: L10n.tr("AT+QPCMV=? 未报告 CellDock 所需的原始 PCM 模式。")
-                    )
-                } else if let pcmCapability,
-                          pcmCapability.output.uppercased().contains("ERROR") {
-                    snapshot.voiceCapability = .unsupported(
-                        reason: L10n.tr("当前 Quectel 固件不支持 AT+QPCMV。")
-                    )
-                } else {
-                    snapshot.voiceCapability = .probeFailed(
-                        reason: pcmCapability?.error ?? L10n.tr("无法完成 AT+QPCMV 能力探测。")
-                    )
-                }
-            case .baiwangInjectedVoice:
-                snapshot.voiceCapability = .initializationFailed(
-                    reason: L10n.tr("Baiwang 动态语音后端不可用。")
-                )
-            case .unknown:
-                snapshot.voiceCapability = .probeFailed(
-                    reason: L10n.tr("USB 厂商和产品字符串无法识别，未选择语音后端。")
-                )
-            }
+        guard snapshot.moduleIMEI != nil else {
+            clearExpectedModuleRestart()
+            snapshot.state = .error
+            snapshot.lastError = L10n.tr("模组身份查询失败：AT+CGSN 未返回 IMEI，已停止初始化。")
+            publishSnapshot(snapshot)
+            celldock_modem_close(modem)
+            resetSMSConnectionState()
+            return
         }
-        pcmSessionEnabled = false
-        callSnapshot = CallSnapshot(
-            phase: mediaAvailable ? .idle : .unavailable,
-            voiceOverUSBSupported: mediaAvailable,
-            lastError: mediaAvailable
-                ? nil
-                : (mediaError ?? L10n.tr("固件未报告可用的 USB 通话媒体通道。")),
-            controlInterfaceBusy: shouldRetryQDCInitialization
-        )
-        publishCallSnapshot()
-        if shouldRetryQDCInitialization {
-            scheduleQDCInitializationRetry()
+
+        // Stage 3/6 — SIM. Degrades on its own: SIMState already distinguishes
+        // "query failed" from "still asking".
+        setInitializationStage(.sim)
+        refreshSIMSnapshot()
+
+        // Stage 4/6 — configuration. usbnet/USBCFG must succeed; failure is
+        // explicit and terminal, with bounded visible retries (R1 + R5).
+        setInitializationStage(.configuration)
+        if !runConfigurationQueries() {
+            scheduleConfigurationQueryRetry()
         }
+
+        // Stage 5/6 — messaging. Best-effort; a failure is reported through
+        // lastError but never blocks connectivity.
+        setInitializationStage(.messaging)
         let pduMode = command("AT+CMGF=0", timeout: 2_000)
         let indications = command("AT+CNMI=2,1,0,0,0", timeout: 2_000)
         let storage = command("AT+CPMS?", timeout: 3_000)
@@ -2908,21 +2846,263 @@ final class ModemService {
             )
         }
 
-        refreshSIMSnapshot()
-        let usbNet = command("AT+QCFG=\"usbnet\"", timeout: 3_000)
-        snapshot.usbNetMode = ATResponseParser.parseUSBNetMode(usbNet.output)
-        let usbConfiguration = command("AT+QCFG=\"USBCFG\"", timeout: 3_000)
-        snapshot.usbConfiguration = ATResponseParser.parseUSBConfiguration(usbConfiguration.output)
-        let ims = command("AT+QCFG=\"ims\"", timeout: 3_000)
-        snapshot.imsMode = ATResponseParser.parseIMSMode(ims.output)
-        snapshot.volteSessionAvailable = ATResponseParser.parseVoLTESessionAvailable(ims.output)
+        // Stage 6/6 — voice leaves the critical path entirely (R3): the modem
+        // reports connected now, while the voice backend prepares in the
+        // background and hot-updates call availability when it lands.
+        setInitializationStage(.voice)
         snapshot.state = .connected
+        snapshot.initializationStage = nil
         clearExpectedModuleRestart()
         snapshot.lastError = pduMode.isSuccess && indications.isSuccess
             ? nil
             : L10n.tr("模块已连接，但短信 PDU/CNMI 初始化失败。")
+        pcmSessionEnabled = false
+        moduleVoiceRuntime = nil
+        callMediaBackend = .none
+        callSnapshot = CallSnapshot(
+            phase: .unavailable,
+            voiceOverUSBSupported: false,
+            lastError: L10n.tr("正在准备通话组件…")
+        )
+        publishSnapshot(snapshot)
+        publishCallSnapshot()
+        prepareVoiceBackend(hardwareFamily: hardwareFamily)
         refreshRadioSnapshot()
         needsImmediateMessagePoll = true
+    }
+
+    private func setInitializationStage(_ stage: ModemInitializationStage) {
+        snapshot.initializationStage = stage
+        publishSnapshot(snapshot)
+    }
+
+    // MARK: Configuration queries (doc 16 R1 + R5)
+
+    private func runConfigurationQueries() -> Bool {
+        var failures: [ModemQueryFailure] = []
+        let usbNet = command("AT+QCFG=\"usbnet\"", timeout: 3_000)
+        if let usbNetMode = ATResponseParser.parseUSBNetMode(usbNet.output) {
+            snapshot.usbNetMode = usbNetMode
+        } else {
+            failures.append(ModemQueryFailure(
+                field: .usbNet,
+                command: "AT+QCFG=\"usbnet\"",
+                reason: configurationFailureReason(for: usbNet, timeoutSeconds: 3)
+            ))
+        }
+        let usbConfiguration = command("AT+QCFG=\"USBCFG\"", timeout: 3_000)
+        if let configuration = ATResponseParser.parseUSBConfiguration(usbConfiguration.output) {
+            snapshot.usbConfiguration = configuration
+        } else {
+            failures.append(ModemQueryFailure(
+                field: .usbConfiguration,
+                command: "AT+QCFG=\"USBCFG\"",
+                reason: configurationFailureReason(for: usbConfiguration, timeoutSeconds: 3)
+            ))
+        }
+        // "ims" is best-effort: a missing VoLTE flag only degrades the radio
+        // view, so it never counts as a configuration failure.
+        let ims = command("AT+QCFG=\"ims\"", timeout: 3_000)
+        snapshot.imsMode = ATResponseParser.parseIMSMode(ims.output)
+        snapshot.volteSessionAvailable = ATResponseParser.parseVoLTESessionAvailable(ims.output)
+        snapshot.queryFailures = failures
+        return failures.isEmpty
+    }
+
+    private func configurationFailureReason(
+        for result: CommandResult,
+        timeoutSeconds: Int
+    ) -> String {
+        let output = result.output.uppercased()
+        if output.contains("ERROR") {
+            let errorLine = ATResponseParser.normalizedLines(result.output)
+                .first { $0.uppercased().contains("ERROR") }
+            if let errorLine {
+                return L10n.tr("模组返回错误：%@", errorLine)
+            }
+        }
+        if output.isEmpty {
+            return L10n.tr("命令超时（%lld 秒无响应），模组内部服务可能未启动", Int64(timeoutSeconds))
+        }
+        return L10n.tr("命令未返回有效响应")
+    }
+
+    private func scheduleConfigurationQueryRetry() {
+        guard let delay = ModemConfigurationQueryRetryPolicy.delay(
+            forCompletedAttempts: configurationQueryRetryAttempts
+        ) else {
+            snapshot.configurationRetryAttempt = 0
+            snapshot.configurationRetryExhausted = true
+            publishSnapshot(snapshot)
+            return
+        }
+        configurationQueryRetryAttempts += 1
+        snapshot.configurationRetryAttempt = configurationQueryRetryAttempts
+        snapshot.configurationRetryExhausted = false
+        publishSnapshot(snapshot)
+        let generation = configurationQueryRetryGeneration
+        queue.asyncAfter(deadline: .now() + delay) { [weak self] in
+            guard let self,
+                  self.configurationQueryRetryGeneration == generation,
+                  self.isOpen,
+                  !self.isShuttingDown,
+                  self.modem != nil else {
+                return
+            }
+            self.retryConfigurationQueries()
+        }
+    }
+
+    private func retryConfigurationQueries() {
+        guard runConfigurationQueries() else {
+            scheduleConfigurationQueryRetry()
+            return
+        }
+        cancelConfigurationQueryRetry()
+        publishSnapshot(snapshot)
+    }
+
+    private func cancelConfigurationQueryRetry() {
+        configurationQueryRetryGeneration &+= 1
+        configurationQueryRetryAttempts = 0
+        snapshot.configurationRetryAttempt = 0
+        snapshot.configurationRetryExhausted = false
+    }
+
+    // MARK: Voice backend preparation (doc 16 R3)
+
+    /// Prepares the call media backend *after* the modem already reports
+    /// connected. The snapshot-level work (AT probes) stays on the AT queue;
+    /// only the heavy ADB payload push runs off-queue, and the result lands
+    /// back on the queue with a generation guard.
+    private func prepareVoiceBackend(hardwareFamily: ModemHardwareFamily) {
+        voicePreparationGeneration &+= 1
+        let generation = voicePreparationGeneration
+        let pcmCapability: CommandResult? = hardwareFamily == .quectelNativeVoice
+            ? command("AT+QPCMV=?", timeout: 3_000)
+            : nil
+        let supportsRawPCM = pcmCapability?.isSuccess == true &&
+            CallATParser.testResponseSupportsRawPCM(pcmCapability?.output ?? "") &&
+            modemLocationID != 0
+        switch CallATParser.preferredMediaBackend(
+            hardwareFamily: hardwareFamily,
+            supportsRawPCM: supportsRawPCM,
+            hasUSBLocation: modemLocationID != 0
+        ) {
+        case .qpcmv:
+            let reset = command("AT+QPCMV=0", timeout: 3_000)
+            if reset.isSuccess {
+                callMediaBackend = .qpcmv
+                finishVoicePreparation(
+                    phase: .idle,
+                    capability: .supported(backend: .nativeQPCMV, verified: false),
+                    error: nil
+                )
+            } else {
+                callMediaBackend = .none
+                let reason = reset.error ?? L10n.tr("无法重置 USB 语音会话。")
+                finishVoicePreparation(
+                    phase: .unavailable,
+                    capability: .initializationFailed(reason: reason),
+                    error: reason
+                )
+            }
+        case .none:
+            callMediaBackend = .none
+            let errorText: String
+            switch hardwareFamily {
+            case .quectelNativeVoice:
+                if let pcmCapability, pcmCapability.isSuccess {
+                    snapshot.voiceCapability = .unsupported(
+                        reason: L10n.tr("AT+QPCMV=? 未报告 CellDock 所需的原始 PCM 模式。")
+                    )
+                    errorText = L10n.tr("固件未报告可用的 USB 通话媒体通道。")
+                } else if let pcmCapability,
+                          pcmCapability.output.uppercased().contains("ERROR") {
+                    snapshot.voiceCapability = .unsupported(
+                        reason: L10n.tr("当前 Quectel 固件不支持 AT+QPCMV。")
+                    )
+                    errorText = L10n.tr("固件未报告可用的 USB 通话媒体通道。")
+                } else {
+                    let reason = pcmCapability?.error ?? L10n.tr("无法完成 AT+QPCMV 能力探测。")
+                    snapshot.voiceCapability = .probeFailed(reason: reason)
+                    errorText = reason
+                }
+            case .baiwangInjectedVoice:
+                let reason = L10n.tr("Baiwang 动态语音后端不可用。")
+                snapshot.voiceCapability = .initializationFailed(reason: reason)
+                errorText = reason
+            case .unknown:
+                let reason = L10n.tr("USB 厂商和产品字符串无法识别，未选择语音后端。")
+                snapshot.voiceCapability = .probeFailed(reason: reason)
+                errorText = reason
+            }
+            callSnapshot = CallSnapshot(
+                phase: .unavailable,
+                voiceOverUSBSupported: false,
+                lastError: errorText
+            )
+            publishSnapshot(snapshot)
+            publishCallSnapshot()
+        case .qdcModuleBridge:
+            let locationID = modemLocationID
+            DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+                guard let self else { return }
+                do {
+                    // CLCC was confirmed empty before initialization. Clear any
+                    // helper/route left behind by a prior app crash or USB-only
+                    // unplug while the module kept external power.
+                    let runtime = try ModuleVoiceRuntime(locationID: locationID)
+                    _ = try runtime.prepare()
+                    try runtime.stopBridge()
+                    self.queue.async { [weak self] in
+                        guard let self,
+                              self.voicePreparationGeneration == generation,
+                              self.isOpen,
+                              !self.isShuttingDown else { return }
+                        self.moduleVoiceRuntime = runtime
+                        self.callMediaBackend = .qdcUAC
+                        self.finishVoicePreparation(
+                            phase: .idle,
+                            capability: .supported(backend: .injectedQDC507, verified: false),
+                            error: nil
+                        )
+                    }
+                } catch {
+                    self.queue.async { [weak self] in
+                        guard let self,
+                              self.voicePreparationGeneration == generation,
+                              self.isOpen,
+                              !self.isShuttingDown else { return }
+                        self.moduleVoiceRuntime = nil
+                        self.callMediaBackend = .none
+                        let reason = L10n.error("QDC507 通话组件尚不可用：%@", underlying: error)
+                        self.finishVoicePreparation(
+                            phase: .unavailable,
+                            capability: .initializationFailed(reason: reason),
+                            error: reason
+                        )
+                        if ADBModuleController.isInterfaceBusyError(error) {
+                            self.scheduleQDCInitializationRetry()
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private func finishVoicePreparation(
+        phase: CallPhase,
+        capability: ModemVoiceCapability,
+        error: String?
+    ) {
+        snapshot.voiceCapability = capability
+        callSnapshot.phase = phase
+        callSnapshot.voiceOverUSBSupported = phase == .idle
+        callSnapshot.lastError = error
+        callSnapshot.controlInterfaceBusy = false
+        publishSnapshot(snapshot)
+        publishCallSnapshot()
     }
 
     private func scheduleQDCInitializationRetry() {

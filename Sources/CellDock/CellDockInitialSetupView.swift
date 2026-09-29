@@ -457,6 +457,7 @@ struct CellDockInitialSetupView: View {
         switch appState.modem.initialSetupState {
         case .insertModule: return L10n.tr("请插入蜂窝模块")
         case .inspecting: return L10n.tr("正在识别模块")
+        case .queryFailed: return L10n.tr("模组查询失败")
         case .needsIdentityConversion: return L10n.tr("识别到 DJI 原始配置")
         case .needsECM: return L10n.tr("模块尚未初始化")
         case .ready: return L10n.tr("模块已准备好")
@@ -473,6 +474,8 @@ struct CellDockInitialSetupView: View {
             return L10n.tr("连接 QDC507 后，CellDock 会自动检查 USB 身份、联网模式和 SIM 状态。")
         case .inspecting:
             return L10n.tr("请保持模块连接，检测完成后会自动显示下一步。")
+        case .queryFailed:
+            return appState.modem.configurationFailureSummary ?? L10n.tr("模组配置查询失败。")
         case .needsIdentityConversion:
             return L10n.tr("已确认安全原值，可一键转换为 CellDock 兼容配置。")
         case .needsECM:
@@ -522,7 +525,8 @@ struct CellDockInitialSetupView: View {
         case .needsIdentityConversion: return "arrow.triangle.2.circlepath.circle.fill"
         case .needsECM: return "wrench.and.screwdriver.fill"
         case .ready: return "checkmark.circle.fill"
-        case .unsupportedIdentity, .unsupportedUSBConfiguration, .unsupportedUSBNetMode, .failed:
+        case .unsupportedIdentity, .unsupportedUSBConfiguration, .unsupportedUSBNetMode,
+             .failed, .queryFailed:
             return "exclamationmark.triangle.fill"
         }
     }
@@ -531,7 +535,8 @@ struct CellDockInitialSetupView: View {
         switch appState.modem.initialSetupState {
         case .ready: return .green
         case .needsIdentityConversion, .needsECM: return .orange
-        case .unsupportedIdentity, .unsupportedUSBConfiguration, .unsupportedUSBNetMode, .failed: return .red
+        case .unsupportedIdentity, .unsupportedUSBConfiguration, .unsupportedUSBNetMode,
+             .failed, .queryFailed: return .red
         case .insertModule, .inspecting: return Color.accentColor
         }
     }

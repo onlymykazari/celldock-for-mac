@@ -472,13 +472,22 @@ struct CellularOverviewCard: View {
         switch displayedModem.operationalState {
         case .absent: return L10n.tr("未连接")
         case .enumerating: return L10n.tr("USB 枚举中")
-        case .initializing: return L10n.tr("初始化中")
+        case .initializing: return initializationStatusText
         case .configurationRequired: return L10n.tr("需要配置")
         case .ready: return L10n.tr("已就绪")
         case .restarting: return L10n.tr("正在重启")
         case .reconnecting: return L10n.tr("重新连接中")
         case .failed: return L10n.tr("异常")
         }
+    }
+
+    /// R2 progress: "初始化中（3/6 · SIM 卡）" instead of a featureless label.
+    private var initializationStatusText: String {
+        guard let stage = displayedModem.initializationStage else {
+            return L10n.tr("初始化中")
+        }
+        let total = ModemInitializationStage.allCases.count
+        return L10n.tr("初始化中（%lld/%lld · %@）", Int64(stage.rawValue + 1), Int64(total), stage.localizedLabel)
     }
 
     private var statusColor: Color {
@@ -592,6 +601,7 @@ struct CellularOverviewCard: View {
         case .disabled: return L10n.tr("已关闭")
         case .waitingForModem: return L10n.tr("等待模组")
         case .starting: return L10n.tr("连接中")
+        case .interfaceMissing: return L10n.tr("网卡未建立")
         case .linkDown: return L10n.tr("链路中断")
         case .interfaceReady: return L10n.tr("接口已连接")
         case .available: return L10n.tr("数据可用")
@@ -604,6 +614,7 @@ struct CellularOverviewCard: View {
         switch displayedConnectionState {
         case .disabled: return "power"
         case .waitingForModem, .starting: return "clock.fill"
+        case .interfaceMissing: return "cable.connector.slash"
         case .linkDown: return "exclamationmark.triangle.fill"
         case .interfaceReady: return "network"
         case .available: return "checkmark.circle.fill"
@@ -616,6 +627,7 @@ struct CellularOverviewCard: View {
         switch displayedConnectionState {
         case .disabled: return .secondary
         case .waitingForModem, .starting, .recovering: return .blue
+        case .interfaceMissing: return .orange
         case .linkDown: return .orange
         case .interfaceReady: return .orange
         case .available: return .green
@@ -632,6 +644,7 @@ struct CellularOverviewCard: View {
         case .disabled: return L10n.tr("蜂窝数据已关闭")
         case .waitingForModem: return L10n.tr("正在等待模组")
         case .starting: return L10n.tr("正在建立数据连接")
+        case .interfaceMissing: return L10n.tr("数据网卡未建立")
         case .linkDown: return L10n.tr("ECM 链路中断")
         case .interfaceReady: return L10n.tr("ECM 接口已连接")
         case .available: return L10n.tr("蜂窝数据可用")
@@ -648,6 +661,8 @@ struct CellularOverviewCard: View {
             return L10n.tr("模组就绪后自动检查网络接口")
         case .starting:
             return L10n.tr("正在等待 ECM 链路与 DHCP 地址")
+        case .interfaceMissing:
+            return L10n.tr("模组已连接，但 macOS 侧尚未出现蜂窝数据网卡；请等待约 30 秒，若仍未出现请重新插拔模组或更换 USB 端口")
         case let .linkDown(isRetrying):
             return isRetrying
                 ? L10n.tr("ECM 载波未建立，正在自动重试")

@@ -103,6 +103,10 @@ enum CellularDataConnectionState: Equatable {
     case disabled
     case waitingForModem
     case starting
+    /// The modem is connected but macOS never got (or lost) the ECM data NIC
+    /// or its network service. Nothing can progress here, so this must never
+    /// be reported as `starting` (doc 16 R4).
+    case interfaceMissing
     /// The service is enabled but the ECM interface has no carrier at all.
     /// Nothing is "connecting" here, so this must not be reported as `starting`;
     /// `isRetrying` says whether automatic repair is still working on it.
@@ -207,6 +211,56 @@ struct ModemUSBConfiguration: Equatable {
     }
 }
 
+/// A must-succeed configuration query that failed during initialization.
+/// Carried on `ModemSnapshot` so the UI can show *which* command failed and
+/// why, instead of an endless "initializing" (doc 16 R1).
+struct ModemQueryFailure: Equatable {
+    enum Field: String, Equatable {
+        case usbNet
+        case usbConfiguration
+    }
+
+    let field: Field
+    let command: String
+    let reason: String
+}
+
+/// Phases of modem initialization. Published on the snapshot while the modem
+/// is still `.connecting` so the UI can show real progress instead of a
+/// featureless spinner (doc 16 R2).
+enum ModemInitializationStage: Int, CaseIterable {
+    case atHandshake
+    case identity
+    case sim
+    case configuration
+    case messaging
+    case voice
+
+    var localizedLabel: String {
+        switch self {
+        case .atHandshake: return L10n.tr("AT 握手")
+        case .identity: return L10n.tr("模组身份")
+        case .sim: return L10n.tr("SIM 卡")
+        case .configuration: return L10n.tr("USB 配置")
+        case .messaging: return L10n.tr("短信通道")
+        case .voice: return L10n.tr("语音组件")
+        }
+    }
+}
+
+/// Bounded, visible auto-retry for failed must-succeed configuration queries
+/// (doc 16 R5). After three failed rounds CellDock stops changing state and
+/// says so, leaving the manual actions to the user.
+enum ModemConfigurationQueryRetryPolicy {
+    static let maximumAttempts = 3
+    private static let delays: [TimeInterval] = [5, 10, 30]
+
+    static func delay(forCompletedAttempts attempts: Int) -> TimeInterval? {
+        guard delays.indices.contains(attempts) else { return nil }
+        return delays[attempts]
+    }
+}
+
 struct ModemSnapshot: Equatable {
     var state: ModemConnectionState = .disconnected
     var lifecyclePhase: ModemLifecyclePhase = .normal
@@ -240,6 +294,36 @@ struct ModemSnapshot: Equatable {
     var usbConfiguration: ModemUSBConfiguration?
     var endpointDescription: String?
     var lastError: String?
+    /// Must-succeed configuration queries that failed during initialization
+    /// (R1: a failed query is a terminal, explainable state — never "still asking").
+    var queryFailures: [ModemQueryFailure] = []
+    /// Current phase while `state == .connecting` (R2 progress reporting).
+    var initializationStage: ModemInitializationStage?
+    /// Bounded, visible auto-retry for failed configuration queries (R5).
+    var configurationRetryAttempt = 0
+    var configurationRetryExhausted = false
+
+    func hasQueryFailure(_ field: ModemQueryFailure.Field) -> Bool {
+        queryFailures.contains { $0.field == field }
+    }
+
+    /// Retry-aware summary of a failed configuration query: the failing
+    /// command + reason, plus whether bounded auto-retry is still running
+    /// or has stopped for good (R5: terminal states must carry cause + action).
+    var configurationFailureSummary: String? {
+        guard let detail = initialSetupState.queryFailureDetail else { return nil }
+        if configurationRetryExhausted {
+            return detail + "\n" + L10n.tr("已停止自动重试；请重新插拔模组、更换 USB 端口，或在 AT 控制台手动检查。")
+        }
+        if configurationRetryAttempt > 0 {
+            return detail + "\n" + L10n.tr(
+                "CellDock 将自动重试（%lld/%lld）。",
+                Int64(configurationRetryAttempt),
+                Int64(ModemConfigurationQueryRetryPolicy.maximumAttempts)
+            )
+        }
+        return detail
+    }
 
     var signalBars: Int {
         guard let signalDBm else { return 0 }
@@ -303,6 +387,8 @@ struct ModemSnapshot: Equatable {
             return .ready
         case .inspecting:
             return .initializing
+        case .queryFailed:
+            return .failed
         case .needsIdentityConversion, .needsECM, .unsupportedIdentity,
              .unsupportedUSBConfiguration, .unsupportedUSBNetMode:
             return .configurationRequired
@@ -329,6 +415,9 @@ struct ModemSnapshot: Equatable {
         let normalizedIdentity = usbIdentity.uppercased()
         if normalizedIdentity == "2CA3:4006" {
             guard let usbConfiguration else {
+                if hasQueryFailure(.usbConfiguration) {
+                    return .queryFailed(queryFailures)
+                }
                 return .unsupportedIdentity(normalizedIdentity)
             }
             if usbConfiguration.isSafeIdentityConversionSource {
@@ -339,7 +428,12 @@ struct ModemSnapshot: Equatable {
         guard normalizedIdentity == "2C7C:0125" else {
             return .unsupportedIdentity(normalizedIdentity)
         }
-        guard let usbConfiguration else { return .inspecting }
+        guard let usbConfiguration else {
+            if hasQueryFailure(.usbConfiguration) {
+                return .queryFailed(queryFailures)
+            }
+            return .inspecting
+        }
         let supportsRequiredRuntime = usbConfiguration.isCellDockTarget || (
             hardwareFamily == .quectelNativeVoice &&
                 usbConfiguration.supportsNativeQuectelRuntime
@@ -347,7 +441,15 @@ struct ModemSnapshot: Equatable {
         guard supportsRequiredRuntime else {
             return .unsupportedUSBConfiguration(usbConfiguration.compactDescription)
         }
-        guard let usbNetMode else { return .inspecting }
+        guard let usbNetMode else {
+            // R1: "query failed" and "not queried yet" must never look the
+            // same. A recorded failure is terminal; only an absent result of
+            // a still-running flow means "inspecting".
+            if hasQueryFailure(.usbNet) || hasQueryFailure(.usbConfiguration) {
+                return .queryFailed(queryFailures)
+            }
+            return .inspecting
+        }
         switch usbNetMode {
         case 0:
             return .needsECM
@@ -362,6 +464,7 @@ struct ModemSnapshot: Equatable {
 enum ModemInitialSetupState: Equatable {
     case insertModule
     case inspecting
+    case queryFailed([ModemQueryFailure])
     case needsIdentityConversion
     case needsECM
     case ready
@@ -369,6 +472,14 @@ enum ModemInitialSetupState: Equatable {
     case unsupportedUSBConfiguration(String)
     case unsupportedUSBNetMode(Int)
     case failed(String)
+
+    /// One-line join of every recorded query failure, for failure cards.
+    var queryFailureDetail: String? {
+        guard case let .queryFailed(failures) = self, !failures.isEmpty else { return nil }
+        return failures
+            .map { "\($0.command)：\($0.reason)" }
+            .joined(separator: "\n")
+    }
 }
 
 struct CellularNetworkStatus: Equatable {
@@ -533,6 +644,13 @@ enum CellularDataConnectionPolicy {
             return .failed
         case .absent, .enumerating, .initializing, .restarting, .reconnecting:
             return .waitingForModem
+        }
+
+        // A ready modem whose ECM NIC never appeared is not "connecting":
+        // nothing downstream will ever populate a link. Report it as its own
+        // diagnosable state instead of an eternal `.starting` (doc 16 R4).
+        if !network.isHardwarePresent {
+            return .interfaceMissing
         }
 
         if network.isActive {

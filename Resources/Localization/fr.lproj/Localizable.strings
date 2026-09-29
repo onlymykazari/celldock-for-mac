@@ -1681,3 +1681,23 @@
 "配置飞书机器人" = "Configurer le bot Feishu";
 "钉钉" = "DingTalk";
 "飞书" = "Feishu";
+
+/* Doc 16 init robustness (R1-R5) */
+"AT 握手" = "Handshake AT";
+"模组身份" = "Identité du module";
+"USB 配置" = "Configuration USB";
+"短信通道" = "Canal SMS";
+"语音组件" = "Composant voix";
+"已停止自动重试；请重新插拔模组、更换 USB 端口，或在 AT 控制台手动检查。" = "Nouvelle tentative automatique arrêtée ; rebranchez le module, essayez un autre port USB ou vérifiez dans la console AT.";
+"CellDock 将自动重试（%lld/%lld）。" = "Nouvelle tentative automatique (%lld/%lld).";
+"模组身份查询失败：AT+CGSN 未返回 IMEI，已停止初始化。" = "Échec de la requête d'identité du module : AT+CGSN n'a renvoyé aucun IMEI, initialisation arrêtée.";
+"命令超时（%lld 秒无响应），模组内部服务可能未启动" = "Délai de la commande dépassé (aucune réponse en %lld secondes) ; le service interne du module ne démarre peut-être pas";
+"模组返回错误：%@" = "Le module a renvoyé une erreur : %@";
+"命令未返回有效响应" = "La commande n'a renvoyé aucune réponse valide";
+"正在准备通话组件…" = "Préparation du composant d'appel…";
+"初始化中（%lld/%lld · %@）" = "Initialisation (%lld/%lld · %@)";
+"网卡未建立" = "Interface réseau absente";
+"数据网卡未建立" = "Interface de données cellulaires non établie";
+"模组已连接，但 macOS 侧尚未出现蜂窝数据网卡；请等待约 30 秒，若仍未出现请重新插拔模组或更换 USB 端口" = "Le module est connecté, mais aucune interface de données cellulaires n'est apparue dans macOS ; attendez environ 30 secondes, puis rebranchez le module ou essayez un autre port USB";
+"模组查询失败" = "Échec de la requête vers le module";
+"模组配置查询失败。" = "Échec de la requête de configuration du module.";
