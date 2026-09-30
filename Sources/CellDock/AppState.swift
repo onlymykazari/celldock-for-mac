@@ -3081,5 +3081,19 @@ final class AppState: ObservableObject {
         if initialSetupPresentationIsActive || InitialSetupWindowController.shared.isVisible {
             InitialSetupWindowController.shared.scheduleDismissAfterSuccess()
         }
+        requestEssentialPermissionsOnceIfNeeded()
+    }
+
+    /// macOS only lists an app under Privacy & Security after it has asked
+    /// for a protected resource at least once, so ask for microphone and
+    /// contacts proactively right after the guided setup — once per install.
+    /// Each call no-ops when the permission is already granted or already
+    /// denied, so this can never nag.
+    private func requestEssentialPermissionsOnceIfNeeded() {
+        let key = "CellDock.EssentialPermissionsRequested.v1"
+        guard !UserDefaults.standard.bool(forKey: key) else { return }
+        UserDefaults.standard.set(true, forKey: key)
+        requestMicrophoneAuthorizationIfNeeded()
+        SystemContactStore.shared.requestAccess()
     }
 }

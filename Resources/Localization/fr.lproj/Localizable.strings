@@ -1822,3 +1822,7 @@
 "切换到 ME 存储失败：%@" = "Échec du passage au stockage ME : %@";
 "清空 ME 存储失败：%@" = "Échec de l'effacement du stockage ME : %@";
 "无响应" = "aucune réponse";
+
+/* Permission self-heal */
+"重置并申请" = "Réinitialiser et demander";
+"若状态为“未允许”且系统设置里找不到 CellDock，说明存在旧的权限记录；“重置并申请”会清除记录并重新弹出授权窗口。" = "Si l'état est « Non autorisé » et que CellDock est introuvable dans Réglages Système, un ancien enregistrement d'autorisation existe ; « Réinitialiser et demander » l'efface puis réaffiche la fenêtre d'autorisation.";

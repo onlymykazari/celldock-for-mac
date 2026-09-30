@@ -309,12 +309,10 @@ struct CellDockSettingsView: View {
                         statusColor: .green,
                         detail: L10n.tr("在界面与系统通知中隐藏联系人、电话号码、短信内容和验证码")
                     ) {
-                        Toggle("演示隐私保护", isOn: Binding(
+                        settingToggle("演示隐私保护", isOn: Binding(
                             get: { appState.isPresentationPrivacyEnabled },
                             set: { appState.setPresentationPrivacyEnabled($0) }
                         ))
-                        .labelsHidden()
-                        .toggleStyle(.adaptiveGlass)
                     }
 
                     if appState.isPresentationPrivacyEnabled {
@@ -374,12 +372,10 @@ struct CellDockSettingsView: View {
                         if appState.isChangingLaunchAtLogin {
                             ProgressView().controlSize(.small)
                         } else {
-                            Toggle("登录时启动", isOn: Binding(
+                            settingToggle("登录时启动", isOn: Binding(
                                 get: { appState.launchAtLoginStatus.isRegistered },
                                 set: { appState.setLaunchAtLogin($0) }
                             ))
-                            .labelsHidden()
-                            .toggleStyle(.adaptiveGlass)
                             .disabled(appState.launchAtLoginStatus == .unavailable)
                         }
                     }
@@ -403,12 +399,10 @@ struct CellDockSettingsView: View {
                             ? L10n.tr("重新连接模块后自动显示")
                             : L10n.tr("模块断开后继续显示状态图标")
                     ) {
-                        Toggle("未连接模块时隐藏菜单栏图标", isOn: Binding(
+                        settingToggle("未连接模块时隐藏菜单栏图标", isOn: Binding(
                             get: { appState.hideMenuBarIconWhenDisconnected },
                             set: { appState.setHideMenuBarIconWhenDisconnected($0) }
                         ))
-                        .labelsHidden()
-                        .toggleStyle(.adaptiveGlass)
                     }
                     .padding(16)
                 }
@@ -441,12 +435,10 @@ struct CellDockSettingsView: View {
                         title: L10n.tr("自动检查更新"),
                         detail: updaterManager.currentVersion
                     ) {
-                        Toggle("自动检查更新", isOn: Binding(
+                        settingToggle("自动检查更新", isOn: Binding(
                             get: { updaterManager.automaticallyChecksForUpdates },
                             set: { updaterManager.automaticallyChecksForUpdates = $0 }
                         ))
-                        .labelsHidden()
-                        .toggleStyle(.adaptiveGlass)
                     }
                     .padding(16)
 
@@ -496,7 +488,7 @@ struct CellDockSettingsView: View {
                     title: L10n.tr("通话时自动录音"),
                     detail: L10n.tr("通话接通且音频就绪后自动开始，录音仅保存在这台 Mac")
                 ) {
-                    Toggle("通话时自动录音", isOn: Binding(
+                    settingToggle("通话时自动录音", isOn: Binding(
                         get: { appState.automaticallyRecordCalls },
                         set: { enabled in
                             if enabled, !recordingConsent {
@@ -506,8 +498,6 @@ struct CellDockSettingsView: View {
                             }
                         }
                     ))
-                    .labelsHidden()
-                    .toggleStyle(.adaptiveGlass)
                 }
                 .padding(16)
             }
@@ -518,7 +508,7 @@ struct CellDockSettingsView: View {
                         title: L10n.tr("已读验证码自动删除"),
                         detail: L10n.tr("标记已读 30 分钟后，从模块/SIM 与本地永久删除")
                     ) {
-                        Toggle("已读验证码自动删除", isOn: Binding(
+                        settingToggle("已读验证码自动删除", isOn: Binding(
                             get: { appState.autoDeleteReadVerificationMessages },
                             set: { enabled in
                                 if enabled {
@@ -528,8 +518,6 @@ struct CellDockSettingsView: View {
                                 }
                             }
                         ))
-                        .labelsHidden()
-                        .toggleStyle(.adaptiveGlass)
                     }
 
                     inlineCallout(
@@ -551,17 +539,17 @@ struct CellDockSettingsView: View {
                 VStack(spacing: 12) {
                     settingRow(
                         title: L10n.tr("启用通知转发"),
+                        status: notificationForwarding.settings.isEnabled ? L10n.tr("已开启") : nil,
+                        statusColor: .green,
                         detail: L10n.tr("将勾选的通知 POST JSON 到指定渠道地址")
                     ) {
-                        Toggle(
+                        settingToggle(
                             "启用通知转发",
                             isOn: Binding(
                                 get: { notificationForwarding.settings.isEnabled },
                                 set: { notificationForwarding.setMasterEnabled($0) }
                             )
                         )
-                        .labelsHidden()
-                        .toggleStyle(.adaptiveGlass)
                     }
                     ForEach(ForwardingEventType.allCases) { event in
                         Divider()
@@ -569,7 +557,7 @@ struct CellDockSettingsView: View {
                             title: event.title,
                             detail: event.detail
                         ) {
-                            Toggle(
+                            settingToggle(
                                 event.title,
                                 isOn: Binding(
                                     get: { notificationForwarding.settings.isEnabled &&
@@ -577,11 +565,10 @@ struct CellDockSettingsView: View {
                                     set: { notificationForwarding.setEventEnabled($0, for: event) }
                                 )
                             )
-                            .labelsHidden()
-                            .toggleStyle(.adaptiveGlass)
                         }
                     }
                 }
+                .padding(16)
             }
 
             settingsSection(title: L10n.tr("出站渠道")) {
@@ -607,23 +594,16 @@ struct CellDockSettingsView: View {
                         }
                     }
                 }
-                .padding(.top, 2)
+                .padding(16)
             }
         }
     }
 
     private var channelKindChips: some View {
-        let kinds = ForwardingChannelKind.allCases
-        return VStack(alignment: .leading, spacing: 8) {
-            ForEach(0 ..< Int(ceil(Double(kinds.count) / 4)), id: \.self) { rowIndex in
-                let start = rowIndex * 4
-                let row = kinds.dropFirst(start).prefix(4)
-                HStack(spacing: 8) {
-                    ForEach(Array(row)) { kind in
-                        channelChip(kind)
-                    }
-                    Spacer(minLength: 0)
-                }
+        let columns = [GridItem(.adaptive(minimum: 128), spacing: 8, alignment: .leading)]
+        return LazyVGrid(columns: columns, alignment: .leading, spacing: 8) {
+            ForEach(ForwardingChannelKind.allCases) { kind in
+                channelChip(kind)
             }
         }
     }
@@ -638,6 +618,8 @@ struct CellDockSettingsView: View {
         } label: {
             Label(kind.title, systemImage: kind.systemImage)
                 .font(.caption.weight(.medium))
+                .lineLimit(1)
+                .fixedSize()
                 .padding(.horizontal, 10)
                 .padding(.vertical, 6)
                 .background(
@@ -657,15 +639,13 @@ struct CellDockSettingsView: View {
             detail: channel.kind.title
         ) {
             HStack(spacing: 8) {
-                Toggle(
+                settingToggle(
                     channel.displayName,
                     isOn: Binding(
                         get: { channel.isEnabled },
                         set: { notificationForwarding.setChannelEnabled($0, for: channel.id) }
                     )
                 )
-                .labelsHidden()
-                .toggleStyle(.adaptiveGlass)
 
                 Button(L10n.tr("配置…")) {
                     presentedForwardingChannel = ForwardingChannelDraft(
@@ -748,12 +728,7 @@ struct CellDockSettingsView: View {
                         statusColor: microphonePermissionStatus.color,
                         detail: L10n.tr("用于通话时传输本机音频")
                     ) {
-                        Button(microphonePermissionButtonTitle) {
-                            handleMicrophonePermissionAction()
-                        }
-                        .adaptiveGlassButton()
-                        .controlSize(.small)
-                        .frame(width: 112)
+                        microphonePermissionAccessory
                     }
                     .padding(16)
 
@@ -765,15 +740,19 @@ struct CellDockSettingsView: View {
                         statusColor: contactPermissionStatus.color,
                         detail: L10n.tr("用于识别来电、短信联系人和拨号")
                     ) {
-                        Button(contactPermissionButtonTitle) {
-                            handleContactPermissionAction()
-                        }
-                        .adaptiveGlassButton()
-                        .controlSize(.small)
-                        .frame(width: 112)
+                        contactPermissionAccessory
                     }
                     .padding(16)
                 }
+            }
+
+            if microphoneAuthorizationStatus == .denied ||
+                contacts.authorizationState == .denied {
+                inlineCallout(
+                    L10n.tr("若状态为“未允许”且系统设置里找不到 CellDock，说明存在旧的权限记录；“重置并申请”会清除记录并重新弹出授权窗口。"),
+                    systemImage: "arrow.triangle.2.circlepath",
+                    color: .orange
+                )
             }
 
             inlineMessage(
@@ -860,6 +839,19 @@ struct CellDockSettingsView: View {
             Spacer(minLength: 16)
             accessory()
         }
+    }
+
+    /// The adaptive-glass toggle style renders `configuration.label` itself,
+    /// so a text label passed to `Toggle(_:)` shows up a second time inside
+    /// `settingRow` and `labelsHidden()` cannot suppress it. Build toggles
+    /// with an empty label and keep the accessible name here instead.
+    private func settingToggle(
+        _ title: String,
+        isOn binding: Binding<Bool>
+    ) -> some View {
+        Toggle(isOn: binding) { EmptyView() }
+            .toggleStyle(.adaptiveGlass)
+            .accessibilityLabel(title)
     }
 
     private func inlineMessage(
@@ -981,12 +973,6 @@ struct CellDockSettingsView: View {
         }
     }
 
-    private var microphonePermissionButtonTitle: String {
-        microphoneAuthorizationStatus == .notDetermined
-            ? L10n.tr("请求权限")
-            : L10n.tr("系统设置…")
-    }
-
     private var contactPermissionStatus: (text: String, color: Color) {
         switch contacts.authorizationState {
         case .notDetermined: return (L10n.tr("未请求"), .secondary)
@@ -994,12 +980,6 @@ struct CellDockSettingsView: View {
         case .denied: return (L10n.tr("未允许"), .orange)
         case .restricted: return (L10n.tr("受限制"), .orange)
         }
-    }
-
-    private var contactPermissionButtonTitle: String {
-        contacts.authorizationState == .notDetermined
-            ? L10n.tr("请求权限")
-            : L10n.tr("系统设置…")
     }
 
     private func handleMicrophonePermissionAction() {
@@ -1020,6 +1000,102 @@ struct CellDockSettingsView: View {
             contacts.requestAccess()
         } else {
             contacts.openPrivacySettings()
+        }
+    }
+
+    /// A denied-but-never-listed state means TCC holds a stale record for
+    /// this bundle ID (typically inherited from a previously installed build
+    /// signed by another identity): requests fail silently and the app never
+    /// appears in System Settings. Resetting the record restores a real
+    /// prompt; `tccutil` needs no root for the user domain.
+    private func resetPermissionRecord(service: String, then request: @escaping () -> Void) {
+        DispatchQueue.global(qos: .userInitiated).async {
+            let process = Process()
+            process.executableURL = URL(fileURLWithPath: "/usr/bin/tccutil")
+            process.arguments = ["reset", service, "app.celldock.mac"]
+            try? process.run()
+            process.waitUntilExit()
+            DispatchQueue.main.async(execute: request)
+        }
+    }
+
+    private func resetAndRequestMicrophonePermission() {
+        resetPermissionRecord(service: "Microphone") {
+            microphoneAuthorizationStatus = AVCaptureDevice.authorizationStatus(for: .audio)
+            handleMicrophonePermissionAction()
+        }
+    }
+
+    private func resetAndRequestContactsPermission() {
+        resetPermissionRecord(service: "Contacts") {
+            contacts.reload()
+            handleContactPermissionAction()
+        }
+    }
+
+    @ViewBuilder
+    private var microphonePermissionAccessory: some View {
+        switch microphoneAuthorizationStatus {
+        case .notDetermined:
+            Button(L10n.tr("请求权限")) {
+                handleMicrophonePermissionAction()
+            }
+            .adaptiveGlassButton()
+            .controlSize(.small)
+            .frame(width: 112)
+        case .denied, .restricted:
+            HStack(spacing: 6) {
+                Button(L10n.tr("重置并申请")) {
+                    resetAndRequestMicrophonePermission()
+                }
+                .adaptiveGlassButton()
+                .controlSize(.small)
+                Button(L10n.tr("系统设置…")) {
+                    openPrivacySettings(anchor: "Privacy_Microphone")
+                }
+                .adaptiveGlassButton()
+                .controlSize(.small)
+            }
+        default:
+            Button(L10n.tr("系统设置…")) {
+                openPrivacySettings(anchor: "Privacy_Microphone")
+            }
+            .adaptiveGlassButton()
+            .controlSize(.small)
+            .frame(width: 112)
+        }
+    }
+
+    @ViewBuilder
+    private var contactPermissionAccessory: some View {
+        switch contacts.authorizationState {
+        case .notDetermined:
+            Button(L10n.tr("请求权限")) {
+                handleContactPermissionAction()
+            }
+            .adaptiveGlassButton()
+            .controlSize(.small)
+            .frame(width: 112)
+        case .denied, .restricted:
+            HStack(spacing: 6) {
+                Button(L10n.tr("重置并申请")) {
+                    resetAndRequestContactsPermission()
+                }
+                .adaptiveGlassButton()
+                .controlSize(.small)
+                Button(L10n.tr("系统设置…")) {
+                    contacts.openPrivacySettings()
+                }
+                .adaptiveGlassButton()
+                .controlSize(.small)
+            }
+        default:
+            Button(L10n.tr("系统设置…")) {
+                contacts.openPrivacySettings()
+            }
+            .adaptiveGlassButton()
+            .controlSize(.small)
+            .frame(width: 112)
         }
     }
 

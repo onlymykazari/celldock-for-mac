@@ -1825,3 +1825,7 @@
 "切换到 ME 存储失败：%@" = "Failed to switch to ME storage: %@";
 "清空 ME 存储失败：%@" = "Failed to wipe ME storage: %@";
 "无响应" = "no response";
+
+/* Permission self-heal */
+"重置并申请" = "Reset & Ask";
+"若状态为“未允许”且系统设置里找不到 CellDock，说明存在旧的权限记录；“重置并申请”会清除记录并重新弹出授权窗口。" = "If the status is Denied but CellDock is missing from System Settings, a stale permission record exists; Reset & Ask clears it and shows the authorization prompt again.";

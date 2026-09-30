@@ -1327,9 +1327,9 @@ struct SIMManagementView: View {
                     .controlSize(.small)
             }
 
-            Toggle("开启接收来电", isOn: incomingCallsBinding)
-                .labelsHidden()
+            Toggle(isOn: incomingCallsBinding) { EmptyView() }
                 .toggleStyle(.adaptiveGlass)
+                .accessibilityLabel(L10n.tr("开启接收来电"))
                 .disabled(!canChangeIncomingCalls)
                 .accessibilityIdentifier("SIMManagementIncomingCallsToggle")
                 .help(L10n.tr("控制模块是否接收运营商来电"))
