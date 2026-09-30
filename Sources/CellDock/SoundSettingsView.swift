@@ -236,7 +236,7 @@ struct SoundSettingsView: View {
         let panel = NSOpenPanel()
         panel.title = L10n.tr("选择%@", kind.title)
         panel.prompt = L10n.tr("选择")
-        panel.message = L10n.tr("音频将复制到 CellDock 的应用支持目录，原文件可以安全移动或删除。")
+        panel.message = L10n.tr("音频将复制到 CellDockPlus 的应用支持目录，原文件可以安全移动或删除。")
         panel.allowedContentTypes = [.audio]
         panel.allowsMultipleSelection = false
         panel.canChooseDirectories = false

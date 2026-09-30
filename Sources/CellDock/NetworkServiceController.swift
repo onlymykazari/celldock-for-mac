@@ -7,7 +7,7 @@ import OSLog
 import SystemConfiguration
 
 private let cellularNetworkLogger = Logger(
-    subsystem: "app.celldock.mac",
+    subsystem: "app.celldockplus.mac",
     category: "CellularNetwork"
 )
 
@@ -15,7 +15,7 @@ final class NetworkServiceController {
     var onStatus: ((CellularNetworkStatus) -> Void)?
     var onStatuses: (([UInt32: CellularNetworkStatus]) -> Void)?
 
-    private let queue = DispatchQueue(label: "app.celldock.mac.network", qos: .userInitiated)
+    private let queue = DispatchQueue(label: "app.celldockplus.mac.network", qos: .userInitiated)
     private let helperClient = NetworkHelperClient()
     private var timer: DispatchSourceTimer?
     private var lastPublishedStatus: CellularNetworkStatus?
@@ -100,7 +100,7 @@ final class NetworkServiceController {
     }
 
     private func readAllStatuses() -> [UInt32: CellularNetworkStatus] {
-        guard let preferences = SCPreferencesCreate(nil, "CellDock All Modules" as NSString, nil),
+        guard let preferences = SCPreferencesCreate(nil, "CellDockPlus All Modules" as NSString, nil),
               let networkSet = SCNetworkSetCopyCurrent(preferences) else {
             return [:]
         }
@@ -216,7 +216,7 @@ final class NetworkServiceController {
     }
 
     private func readStatus() -> CellularNetworkStatus {
-        guard let preferences = SCPreferencesCreate(nil, "CellDock" as NSString, nil),
+        guard let preferences = SCPreferencesCreate(nil, "CellDockPlus" as NSString, nil),
               let networkSet = SCNetworkSetCopyCurrent(preferences) else {
             return CellularNetworkStatus(
                 lastError: systemConfigurationError(L10n.tr("无法读取网络配置"))

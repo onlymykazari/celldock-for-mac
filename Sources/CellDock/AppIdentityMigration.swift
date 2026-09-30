@@ -19,7 +19,7 @@ enum AppIdentityMigration {
 
         if !defaults.bool(forKey: namingMigrationMarker) {
             for (key, value) in defaults.dictionaryRepresentation() where key.contains("MaVo") {
-                let migratedKey = key.replacingOccurrences(of: "MaVo", with: "CellDock")
+                let migratedKey = key.replacingOccurrences(of: "MaVo", with: "CellDockPlus")
                 if defaults.object(forKey: migratedKey) == nil {
                     defaults.set(value, forKey: migratedKey)
                 }
@@ -37,7 +37,7 @@ enum AppDataDirectory {
             for: .applicationSupportDirectory,
             in: .userDomainMask
         ).first!
-        let current = root.appendingPathComponent("CellDock", isDirectory: true)
+        let current = root.appendingPathComponent("CellDockPlus", isDirectory: true)
         let legacy = root.appendingPathComponent("MaVo", isDirectory: true)
 
         if !fileManager.fileExists(atPath: current.path),

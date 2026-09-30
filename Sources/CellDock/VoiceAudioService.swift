@@ -4,7 +4,7 @@ import CUACProbe
 import Foundation
 
 /// Bridges raw PCM on USB interface 1 to the Mac microphone and speaker.
-/// The modem side can be QPCMV option 0 or CellDock's QDC507 PCM helper.
+/// The modem side can be QPCMV option 0 or CellDockPlus's QDC507 PCM helper.
 /// USB waits and sample-rate conversion never run on the CoreAudio render thread.
 final class VoiceAudioService {
     var onError: ((String) -> Void)?
@@ -15,9 +15,9 @@ final class VoiceAudioService {
         var removedQuietPasses: Int
     }
 
-    private let ioQueue = DispatchQueue(label: "app.celldock.mac.voice.usb", qos: .userInteractive)
-    private let captureQueue = DispatchQueue(label: "app.celldock.mac.voice.capture", qos: .userInteractive)
-    private let playbackQueue = DispatchQueue(label: "app.celldock.mac.voice.playback", qos: .userInteractive)
+    private let ioQueue = DispatchQueue(label: "app.celldockplus.mac.voice.usb", qos: .userInteractive)
+    private let captureQueue = DispatchQueue(label: "app.celldockplus.mac.voice.capture", qos: .userInteractive)
+    private let playbackQueue = DispatchQueue(label: "app.celldockplus.mac.voice.playback", qos: .userInteractive)
     private let stateLock = NSLock()
     private let uploadLock = NSLock()
 

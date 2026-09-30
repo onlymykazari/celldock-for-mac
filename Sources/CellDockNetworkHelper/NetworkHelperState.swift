@@ -3,7 +3,7 @@ import Foundation
 import OSLog
 
 private let helperStateLogger = Logger(
-    subsystem: "app.celldock.mac.network.helper",
+    subsystem: "app.celldockplus.mac.network.helper",
     category: "HelperState"
 )
 
@@ -66,7 +66,7 @@ struct NetworkHelperState: Codable, Equatable {
 
 final class NetworkHelperStateStore {
     private let directoryURL = URL(
-        fileURLWithPath: "/Library/Application Support/CellDock",
+        fileURLWithPath: "/Library/Application Support/CellDockPlus",
         isDirectory: true
     )
     private let legacyDirectoryURL = URL(

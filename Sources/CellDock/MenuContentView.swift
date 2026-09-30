@@ -170,7 +170,7 @@ struct MenuContentView: View {
                     Text(L10n.tr("删除这条短信？"))
                         .font(.headline)
                         .accessibilityAddTraits(.isHeader)
-                    Text(L10n.tr("删除后这条短信将不再出现在 CellDock 中，此操作无法撤销。"))
+                    Text(L10n.tr("删除后这条短信将不再出现在 CellDockPlus 中，此操作无法撤销。"))
                         .font(.callout)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)

@@ -3,10 +3,10 @@ set -euo pipefail
 
 MODE="${1:-run}"
 APP_NAME="CellDock"
-BUNDLE_ID="app.celldock.mac"
+BUNDLE_ID="app.celldockplus.mac"
 ROOT_DIR="${0:A:h:h}"
 DIST_DIR="$ROOT_DIR/dist"
-APP_BUNDLE="$DIST_DIR/CellDock.app"
+APP_BUNDLE="$DIST_DIR/CellDockPlus.app"
 APP_CONTENTS="$APP_BUNDLE/Contents"
 APP_MACOS="$APP_CONTENTS/MacOS"
 APP_RESOURCES="$APP_CONTENTS/Resources"
@@ -48,7 +48,7 @@ cd "$ROOT_DIR"
 xcrun swift build --disable-sandbox -Xswiftc -disable-sandbox
 BIN_DIR="$(xcrun swift build --disable-sandbox -Xswiftc -disable-sandbox --show-bin-path)"
 
-[[ "$APP_BUNDLE" == "$ROOT_DIR/dist/CellDock.app" ]] || {
+[[ "$APP_BUNDLE" == "$ROOT_DIR/dist/CellDockPlus.app" ]] || {
   print -u2 "Unexpected app bundle path: $APP_BUNDLE"
   exit 1
 }

@@ -127,7 +127,7 @@ enum AlertSoundServiceError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case let .bundledSoundMissing(fileName):
-            return L10n.tr("应用内置声音 %@ 不存在，请重新安装 CellDock。", fileName)
+            return L10n.tr("应用内置声音 %@ 不存在，请重新安装 CellDockPlus。", fileName)
         case .invalidAudio:
             return L10n.tr("无法读取该音频文件，请选择 macOS 支持的音频格式。")
         }
@@ -482,7 +482,7 @@ final class AlertSoundService: ObservableObject {
             in: .userDomainMask
         ).first ?? fileManager.homeDirectoryForCurrentUser
         return applicationSupport
-            .appendingPathComponent("CellDock", isDirectory: true)
+            .appendingPathComponent("CellDockPlus", isDirectory: true)
             .appendingPathComponent("Sounds", isDirectory: true)
     }
 }

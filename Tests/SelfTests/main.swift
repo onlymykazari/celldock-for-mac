@@ -104,7 +104,7 @@ do {
     var tamperedPayload = try Data(contentsOf: payloadURL)
     tamperedPayload[tamperedPayload.index(before: tamperedPayload.endIndex)] ^= 0x01
     let tamperedPayloadURL = FileManager.default.temporaryDirectory
-        .appendingPathComponent("CellDock-ModuleVoice-\(UUID().uuidString).payload")
+        .appendingPathComponent("CellDockPlus-ModuleVoice-\(UUID().uuidString).payload")
     try tamperedPayload.write(to: tamperedPayloadURL, options: .atomic)
     defer { try? FileManager.default.removeItem(at: tamperedPayloadURL) }
     var rejectedTamperedPayload = false
@@ -116,7 +116,7 @@ do {
     try expect(rejectedTamperedPayload, "tampered ModuleVoice payload was accepted")
 
     let tombstoneRoot = FileManager.default.temporaryDirectory
-        .appendingPathComponent("CellDock-message-tombstone-\(UUID().uuidString)", isDirectory: true)
+        .appendingPathComponent("CellDockPlus-message-tombstone-\(UUID().uuidString)", isDirectory: true)
     defer { try? FileManager.default.removeItem(at: tombstoneRoot) }
     let tombstoneDate = Date(timeIntervalSince1970: 1_700_000_000)
     let tombstoneID = "stable-pdu-sha256"
@@ -135,7 +135,7 @@ do {
         appBundlePath: "/Users/test/Applications/CellDock.app"
     )
     try expect(
-        launchAgentPropertyList["Label"] as? String == "app.celldock.mac.launch-at-login",
+        launchAgentPropertyList["Label"] as? String == "app.celldockplus.mac.launch-at-login",
         "LaunchAgent label"
     )
     try expect(
@@ -389,7 +389,7 @@ do {
     )
 
     try expect(
-        SMSVerificationCodeExtractor.extract(from: "【CellDock】您的验证码为 482913，5 分钟内有效。") == "482913",
+        SMSVerificationCodeExtractor.extract(from: "【CellDockPlus】您的验证码为 482913，5 分钟内有效。") == "482913",
         "Chinese verification code extraction"
     )
     try expect(
@@ -412,7 +412,7 @@ do {
     let readVerificationMessage = SMSMessage(
         id: "verification-read",
         modemIndices: [],
-        sender: "CellDock",
+        sender: "CellDockPlus",
         body: "您的验证码为 482913。",
         timestamp: verificationReadDate,
         rawPDUs: [],
@@ -483,7 +483,7 @@ do {
         "message refresh erased verification read time"
     )
 
-    let adbPayload = Data("host::CellDock\0".utf8)
+    let adbPayload = Data("host::CellDockPlus\0".utf8)
     let adbHeader = ADBWire.encodeHeader(
         command: ADBWire.cnxn,
         argument0: 0x01000001,
@@ -1215,7 +1215,7 @@ do {
     )
     try expect(
         transitionalUSBConfiguration?.isSafeIdentityConversionSource == true,
-        "CellDock ADB-disabled transition tuple was not accepted as a safe conversion source"
+        "CellDockPlus ADB-disabled transition tuple was not accepted as a safe conversion source"
     )
     try expect(
         ModemSnapshot(
@@ -1229,12 +1229,12 @@ do {
     let maVoUSBConfiguration = ATResponseParser.parseUSBConfiguration(
         "+QCFG: \"usbcfg\",0x2C7C,0x125,1,1,1,1,1,1,1\r\nOK"
     )
-    try expect(maVoUSBConfiguration?.isCellDockTarget == true, "CellDock target USBCFG parsing")
-    try expect(maVoUSBConfiguration?.adbEnabled == true, "CellDock target ADB flag")
+    try expect(maVoUSBConfiguration?.isCellDockTarget == true, "CellDockPlus target USBCFG parsing")
+    try expect(maVoUSBConfiguration?.adbEnabled == true, "CellDockPlus target ADB flag")
     try expect(
         ModemUSBConfiguration.maVoTarget.usbcfgWriteCommand ==
             "AT+QCFG=\"USBCFG\",0x2C7C,0x0125,1,1,1,1,1,1,1",
-        "CellDock target USBCFG write command"
+        "CellDockPlus target USBCFG write command"
     )
     let nativeQuectelUSBConfiguration = ATResponseParser.parseUSBConfiguration(
         "+QCFG: \"usbcfg\",0x2C7C,0x125,1,1,1,1,1,0,1\r\nOK"
@@ -3312,7 +3312,7 @@ do {
 
     let loopbackIndex = if_nametoindex("lo0")
     // A client can close between readiness and a write. This must become an
-    // ordinary EPIPE path instead of terminating CellDock with SIGPIPE.
+    // ordinary EPIPE path instead of terminating CellDockPlus with SIGPIPE.
     SOCKSSignalSafety.install()
     try expect(raise(SIGPIPE) == 0, "SIGPIPE safety handler was not installed")
     try expect(loopbackIndex != 0, "test host has no loopback interface")
@@ -3535,7 +3535,7 @@ do {
         "a fully registered vowifi-go session was not reported as registered"
     )
 
-    // The same reply, but started by a previous CellDock launch: its SOCKS5
+    // The same reply, but started by a previous CellDockPlus launch: its SOCKS5
     // relay no longer exists, so it must never render as healthy.
     try expect(
         VoWiFiSessionState(
@@ -3859,7 +3859,7 @@ do {
 
     let forwardingContext = ForwardingEventContext(
         type: .newMessage,
-        title: "[CellDock] 新短信",
+        title: "[CellDockPlus] 新短信",
         content: "验证码 123456，\"注意\" 保密\n第二行",
         sender: "10086",
         operatorName: "中国移动",
@@ -3878,7 +3878,7 @@ do {
     let feishuText = (feishuObject?["content"] as? [String: Any])?["text"] as? String
     try expect(
         feishuObject != nil &&
-            feishuText == "[CellDock] 新短信\n验证码 123456，\"注意\" 保密\n第二行",
+            feishuText == "[CellDockPlus] 新短信\n验证码 123456，\"注意\" 保密\n第二行",
         "the feishu default template did not render valid JSON with escaped values"
     )
 
@@ -3952,7 +3952,7 @@ do {
         "malformed or unrelated assertions did not fail safe"
     )
 
-    print("CellDock self-tests passed (calls, PDU/UDH, SOCKS5, VoWiFi, buffering, storage, merge, init-robustness).")
+    print("CellDockPlus self-tests passed (calls, PDU/UDH, SOCKS5, VoWiFi, buffering, storage, merge, init-robustness).")
 } catch {
     fputs("Self-test failed: \(error)\n", stderr)
     exit(1)

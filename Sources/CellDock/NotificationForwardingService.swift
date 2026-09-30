@@ -19,7 +19,7 @@ final class NotificationForwardingService {
     func forward(_ message: SMSMessage, moduleName: String?, operatorName: String?) {
         dispatch(.init(
             type: .newMessage,
-            title: L10n.tr("[CellDock] 新短信"),
+            title: L10n.tr("[CellDockPlus] 新短信"),
             content: message.body,
             sender: message.sender,
             operatorName: operatorName,
@@ -34,7 +34,7 @@ final class NotificationForwardingService {
     func forwardMissedCall(_ record: CallHistoryRecord, moduleName: String?, operatorName: String?) {
         dispatch(.init(
             type: .missedCall,
-            title: L10n.tr("[CellDock] 未接来电"),
+            title: L10n.tr("[CellDockPlus] 未接来电"),
             content: L10n.tr("未接来电：%@", record.number),
             sender: record.number,
             operatorName: operatorName,
@@ -50,7 +50,7 @@ final class NotificationForwardingService {
         guard let number, !number.isEmpty else { return }
         dispatch(.init(
             type: .incomingCall,
-            title: L10n.tr("[CellDock] 来电"),
+            title: L10n.tr("[CellDockPlus] 来电"),
             content: L10n.tr("来电：%@", number),
             sender: number,
             operatorName: operatorName,
@@ -70,7 +70,7 @@ final class NotificationForwardingService {
     ) {
         dispatch(.init(
             type: .systemStatus,
-            title: L10n.tr("[CellDock] 系统状态"),
+            title: L10n.tr("[CellDockPlus] 系统状态"),
             content: summary,
             sender: nil,
             operatorName: operatorName,
@@ -297,8 +297,8 @@ final class NotificationForwardingService {
         let secrets = await MainActor.run { store.secrets(for: channel) }
         let context = ForwardingEventContext(
             type: event,
-            title: L10n.tr("[CellDock] 测试推送"),
-            content: L10n.tr("这是一条来自 CellDock 通知转发功能的测试消息。"),
+            title: L10n.tr("[CellDockPlus] 测试推送"),
+            content: L10n.tr("这是一条来自 CellDockPlus 通知转发功能的测试消息。"),
             sender: "10086",
             operatorName: nil,
             signal: nil,

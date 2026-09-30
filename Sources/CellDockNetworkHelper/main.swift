@@ -6,12 +6,12 @@ import Security
 import SystemConfiguration
 
 private let networkHelperLogger = Logger(
-    subsystem: "app.celldock.mac.network.helper",
+    subsystem: "app.celldockplus.mac.network.helper",
     category: "CellularNetwork"
 )
 
 private final class NetworkHelperService: NSObject, CellDockNetworkHelperProtocol {
-    private let queue = DispatchQueue(label: "app.celldock.mac.network.helper.mutation")
+    private let queue = DispatchQueue(label: "app.celldockplus.mac.network.helper.mutation")
     private let mutator = RootNetworkMutator()
     private let voWiFiHost = VoWiFiHostManager()
 
@@ -165,7 +165,7 @@ private enum ClientValidator {
     }
 
     private static func isAllowedExecutablePath(_ path: String) -> Bool {
-        let expectedPath = "/Applications/CellDock.app/Contents/MacOS/CellDock"
+        let expectedPath = "/Applications/CellDock.app/Contents/MacOS/CellDockPlus"
         let standardizedPath = URL(fileURLWithPath: path).standardizedFileURL.path
         return standardizedPath == expectedPath && canonical(standardizedPath) == expectedPath
     }

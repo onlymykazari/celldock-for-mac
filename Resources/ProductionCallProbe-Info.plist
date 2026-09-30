@@ -9,7 +9,7 @@
     <key>CFBundleExecutable</key>
     <string>celldock_production_call_probe</string>
     <key>CFBundleIdentifier</key>
-    <string>app.celldock.mac.production-call-probe</string>
+    <string>app.celldockplus.mac.production-call-probe</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>

@@ -138,7 +138,7 @@ struct CellDockInitialSetupView: View {
             Label("转换配置", systemImage: "arrow.triangle.2.circlepath")
                 .font(.headline)
 
-            Text("CellDock 会先完成 QADBKEY 解锁；仅当当前值精确匹配已验证配置时才写入，并在逐项回读成功后重启模块。")
+            Text("CellDockPlus 会先完成 QADBKEY 解锁；仅当当前值精确匹配已验证配置时才写入，并在逐项回读成功后重启模块。")
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -429,13 +429,13 @@ struct CellDockInitialSetupView: View {
     private func confirmationDetail(_ confirmation: Confirmation) -> String {
         switch confirmation {
         case .identityConversion:
-            return L10n.tr("仅当原值精确匹配已验证配置时执行。CellDock 会先解锁模组，再转换 USB 身份并开启 ADB、CDC‑ECM 与通话音频，逐项回读成功后才重启。")
+            return L10n.tr("仅当原值精确匹配已验证配置时执行。CellDockPlus 会先解锁模组，再转换 USB 身份并开启 ADB、CDC‑ECM 与通话音频，逐项回读成功后才重启。")
         case .ecmInitialization:
             if appState.modem.hardwareFamily == .quectelNativeVoice,
                appState.modem.usbConfiguration?.isCellDockTarget != true {
-                return L10n.tr("CellDock 将写入 usbnet=1 和完整 USBCFG。逐项回读成功后模块会重启一次；Quectel 设备不会注入语音内核模块。")
+                return L10n.tr("CellDockPlus 将写入 usbnet=1 和完整 USBCFG。逐项回读成功后模块会重启一次；Quectel 设备不会注入语音内核模块。")
             }
-            return L10n.tr("CellDock 将确认完整 USBCFG 并把 usbnet 切换为 1。写入回读成功后模块会重启一次。")
+            return L10n.tr("CellDockPlus 将确认完整 USBCFG 并把 usbnet 切换为 1。写入回读成功后模块会重启一次。")
         }
     }
 
@@ -471,13 +471,13 @@ struct CellDockInitialSetupView: View {
     private var setupDetail: String {
         switch appState.modem.initialSetupState {
         case .insertModule:
-            return L10n.tr("连接 QDC507 后，CellDock 会自动检查 USB 身份、联网模式和 SIM 状态。")
+            return L10n.tr("连接 QDC507 后，CellDockPlus 会自动检查 USB 身份、联网模式和 SIM 状态。")
         case .inspecting:
             return L10n.tr("请保持模块连接，检测完成后会自动显示下一步。")
         case .queryFailed:
             return appState.modem.configurationFailureSummary ?? L10n.tr("模组配置查询失败。")
         case .needsIdentityConversion:
-            return L10n.tr("已确认安全原值，可一键转换为 CellDock 兼容配置。")
+            return L10n.tr("已确认安全原值，可一键转换为 CellDockPlus 兼容配置。")
         case .needsECM:
             return L10n.tr("已识别模块，但 macOS 联网所需的 CDC‑ECM 尚未开启。")
         case .ready:
@@ -487,9 +487,9 @@ struct CellDockInitialSetupView: View {
         case let .unsupportedIdentity(identity):
             return identity == "2CA3:4006"
                 ? L10n.tr("识别到 DJI 身份，但无法读取精确 USBCFG，因此不会提供写入。")
-                : L10n.tr("当前身份为 %@，CellDock 只处理已验证的 DJI/QDC507 模块。", identity)
+                : L10n.tr("当前身份为 %@，CellDockPlus 只处理已验证的 DJI/QDC507 模块。", identity)
         case let .unsupportedUSBConfiguration(configuration):
-            return L10n.tr("当前值为 %@。它不等于已记录的 DJI 原值，CellDock 已拒绝一键转换。", configuration)
+            return L10n.tr("当前值为 %@。它不等于已记录的 DJI 原值，CellDockPlus 已拒绝一键转换。", configuration)
         case let .unsupportedUSBNetMode(mode):
             return L10n.tr("检测到 usbnet=%lld。一键初始化只处理已验证的 usbnet=0 → 1。", Int64(mode))
         case let .failed(error):
@@ -569,7 +569,7 @@ struct CellDockInitialSetupView: View {
     private var usbConfigurationStatusText: String {
         guard let configuration = appState.modem.usbConfiguration else { return L10n.tr("等待检测") }
         if configuration.isSafeDJISource { return L10n.tr("DJI 原值已确认") }
-        if configuration.isCellDockTarget { return L10n.tr("CellDock 目标值") }
+        if configuration.isCellDockTarget { return L10n.tr("CellDockPlus 目标值") }
         return configuration.identity
     }
 }

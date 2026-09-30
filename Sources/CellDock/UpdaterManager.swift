@@ -18,8 +18,10 @@ enum UpdateChannel: String, CaseIterable, Identifiable {
         }
     }
 
-    fileprivate var feedURL: String {
-        "https://celldock.app/\(rawValue)/appcast.xml"
+    fileprivate var feedURL: String? {
+        // CellDockPlus 分叉暂无自己的更新源。返回 nil 禁用 Sparkle，
+        // 避免误抓上游 celldock.app 的 appcast 把分叉覆盖回上游版本。
+        nil
     }
 }
 

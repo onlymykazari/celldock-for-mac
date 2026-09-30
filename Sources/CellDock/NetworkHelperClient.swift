@@ -9,7 +9,7 @@ final class NetworkHelperClient {
         case outdated
     }
 
-    private let queue = DispatchQueue(label: "app.celldock.mac.network.helper.client")
+    private let queue = DispatchQueue(label: "app.celldockplus.mac.network.helper.client")
     private let installer = NetworkHelperInstaller()
 
     func startVoWiFiHost(
@@ -109,7 +109,7 @@ final class NetworkHelperClient {
             case let .incompatible(version):
                 completion(.failure(
                     L10n.tr(
-                        "已安装的网络 helper 协议版本为 %lld，但 CellDock 需要 %lld。请重新安装最新版。",
+                        "已安装的网络 helper 协议版本为 %lld，但 CellDockPlus 需要 %lld。请重新安装最新版。",
                         Int64(version),
                         Int64(CellDockNetworkIPC.protocolVersion)
                     ),

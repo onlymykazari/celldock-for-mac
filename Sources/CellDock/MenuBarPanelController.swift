@@ -4,7 +4,7 @@ import OSLog
 import SwiftUI
 
 private let menuBarPanelLogger = Logger(
-    subsystem: Bundle.main.bundleIdentifier ?? "app.celldock.mac",
+    subsystem: Bundle.main.bundleIdentifier ?? "app.celldockplus.mac",
     category: "MenuBarPanel"
 )
 
@@ -381,19 +381,19 @@ final class MenuBarPanelController: NSObject, NSWindowDelegate {
         let statusModem = appState.menuBarStatusModule?.modem ?? ModemSnapshot()
         switch statusModem.operationalState {
         case .absent:
-            return L10n.tr("CellDock：模组未连接")
+            return L10n.tr("CellDockPlus：模组未连接")
         case .enumerating:
-            return L10n.tr("CellDock：USB 枚举中")
+            return L10n.tr("CellDockPlus：USB 枚举中")
         case .initializing:
-            return L10n.tr("CellDock：模组初始化中")
+            return L10n.tr("CellDockPlus：模组初始化中")
         case .configurationRequired:
-            return L10n.tr("CellDock：模组需要配置")
+            return L10n.tr("CellDockPlus：模组需要配置")
         case .restarting:
-            return L10n.tr("CellDock：模组正在重启")
+            return L10n.tr("CellDockPlus：模组正在重启")
         case .reconnecting:
-            return L10n.tr("CellDock：模组正在重新连接")
+            return L10n.tr("CellDockPlus：模组正在重新连接")
         case .failed:
-            return L10n.tr("CellDock：模组异常")
+            return L10n.tr("CellDockPlus：模组异常")
         case .ready:
             break
         }
@@ -412,7 +412,7 @@ final class MenuBarPanelController: NSObject, NSWindowDelegate {
         if let signal = statusModem.signalDBm {
             return "\(statusModem.operatorName ?? L10n.tr("蜂窝网络")) · \(signal) dBm · \(dataStatus)"
         }
-        return L10n.tr("CellDock：模块已连接 · %@", dataStatus)
+        return L10n.tr("CellDockPlus：模块已连接 · %@", dataStatus)
     }
 
     private var presentedCallIdentity: String {

@@ -135,8 +135,8 @@ struct MenuBarHubView: View {
                 systemImage: "power",
                 action: quitApplication
             )
-            .help(L10n.tr("退出 CellDock"))
-            .accessibilityLabel(L10n.tr("退出 CellDock"))
+            .help(L10n.tr("退出 CellDockPlus"))
+            .accessibilityLabel(L10n.tr("退出 CellDockPlus"))
         }
     }
 

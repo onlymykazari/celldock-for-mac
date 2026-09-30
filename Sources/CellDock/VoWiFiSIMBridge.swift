@@ -58,7 +58,7 @@ final class VoWiFiSIMBridge {
     private var listener: NWListener?
 
     init(moduleID: CellularModuleID, executor: @escaping Executor) {
-        queue = DispatchQueue(label: "app.celldock.vowifi.sim-bridge.\(moduleID.rawValue)")
+        queue = DispatchQueue(label: "app.celldockplus.vowifi.sim-bridge.\(moduleID.rawValue)")
         self.executor = executor
     }
 

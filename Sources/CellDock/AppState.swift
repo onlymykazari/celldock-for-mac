@@ -6,7 +6,7 @@ import CellDockNetworkIPC
 import OSLog
 
 private let cellularNetworkLogger = Logger(
-    subsystem: "app.celldock.mac",
+    subsystem: "app.celldockplus.mac",
     category: "CellularNetwork"
 )
 
@@ -2890,7 +2890,7 @@ final class AppState: ObservableObject {
                     Date().addingTimeInterval(5 * 60)
             }
             if !automatically, case let .failure(message) = result {
-                NSLog("CellDock hid a deleted SMS locally but module cleanup failed: %@", message)
+                NSLog("CellDockPlus hid a deleted SMS locally but module cleanup failed: %@", message)
             }
             self.scheduleVerificationAutoDelete()
         }

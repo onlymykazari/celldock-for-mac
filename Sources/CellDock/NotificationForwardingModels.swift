@@ -194,7 +194,7 @@ struct ForwardingChannelSecrets: Equatable {
 /// the previous `SMSForwardingCredentialStore` (fixed service, per-item
 /// accounts) but keyed by channel UUID so channels can be added and removed.
 struct ForwardingCredentialStore {
-    private let service = "app.celldock.mac.notification-forwarding"
+    private let service = "app.celldockplus.mac.notification-forwarding"
 
     private enum Field: String, CaseIterable {
         case url

@@ -1983,14 +1983,14 @@ private struct ContactsManagementView: View {
             case .notDetermined:
                 permissionView(
                     title: "允许访问系统通讯录",
-                    detail: "CellDock 使用联系人姓名匹配来电和短信，并允许在电话窗口中新增、编辑和删除系统联系人。",
+                    detail: "CellDockPlus 使用联系人姓名匹配来电和短信，并允许在电话窗口中新增、编辑和删除系统联系人。",
                     actionTitle: "继续",
                     action: contacts.requestAccess
                 )
             case .denied, .restricted:
                 permissionView(
                     title: "通讯录访问已关闭",
-                    detail: "仍可手动输入号码。若要浏览或管理系统联系人，请在系统设置中允许 CellDock 访问通讯录。",
+                    detail: "仍可手动输入号码。若要浏览或管理系统联系人，请在系统设置中允许 CellDockPlus 访问通讯录。",
                     actionTitle: "打开系统设置",
                     action: contacts.openPrivacySettings
                 )

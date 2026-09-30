@@ -89,14 +89,14 @@ final class ModemService {
         case qdcModuleBridge
     }
 
-    private let queue = DispatchQueue(label: "app.celldock.mac.modem", qos: .userInitiated)
+    private let queue = DispatchQueue(label: "app.celldockplus.mac.modem", qos: .userInitiated)
     private let preferredLocationID: UInt32?
     private let shutdownControlQueue = DispatchQueue(
-        label: "app.celldock.mac.modem.shutdown",
+        label: "app.celldockplus.mac.modem.shutdown",
         qos: .userInitiated
     )
     private let interfaceContentionQueue = DispatchQueue(
-        label: "app.celldock.mac.usb-contention",
+        label: "app.celldockplus.mac.usb-contention",
         qos: .userInitiated
     )
     private let modemHandleLock = NSLock()
@@ -1151,7 +1151,7 @@ final class ModemService {
                     currentConfiguration.isSafeQuectelSource)
             guard mayWriteFullConfiguration else {
                 DispatchQueue.main.async {
-                    completion(.failure(L10n.tr("当前 USBCFG 不属于已验证的 Quectel 原值或 CellDock 目标值，拒绝写入。")))
+                    completion(.failure(L10n.tr("当前 USBCFG 不属于已验证的 Quectel 原值或 CellDockPlus 目标值，拒绝写入。")))
                 }
                 return
             }
@@ -1208,7 +1208,7 @@ final class ModemService {
                 if writeConfiguration.isTransportAmbiguous {
                     self.beginExpectedModuleRestart()
                     DispatchQueue.main.async {
-                        completion(.failure(L10n.tr("USBCFG 写入响应不明确，CellDock 未自动重试；正在等待 USB 重新枚举并回读实际状态。")))
+                        completion(.failure(L10n.tr("USBCFG 写入响应不明确，CellDockPlus 未自动重试；正在等待 USB 重新枚举并回读实际状态。")))
                     }
                     return
                 }
@@ -1222,7 +1222,7 @@ final class ModemService {
                 if verifyConfiguration.isTransportAmbiguous {
                     self.beginExpectedModuleRestart()
                     DispatchQueue.main.async {
-                        completion(.failure(L10n.tr("USBCFG 已写入，但模块在回读前重新枚举；CellDock 不会重复写入，将在重连后核对。")))
+                        completion(.failure(L10n.tr("USBCFG 已写入，但模块在回读前重新枚举；CellDockPlus 不会重复写入，将在重连后核对。")))
                     }
                     return
                 }
@@ -1306,7 +1306,7 @@ final class ModemService {
                   ),
                   currentConfiguration.isSafeIdentityConversionSource else {
                 DispatchQueue.main.async {
-                    completion(.failure(L10n.tr("当前 USBCFG 不是已验证的 DJI 原值、过渡值或 CellDock 目标值，拒绝写入。")))
+                    completion(.failure(L10n.tr("当前 USBCFG 不是已验证的 DJI 原值、过渡值或 CellDockPlus 目标值，拒绝写入。")))
                 }
                 return
             }
@@ -1317,7 +1317,7 @@ final class ModemService {
                     .contains { $0.uppercased().hasPrefix("+QPCMV:") && $0.contains("0-2") }
                 guard pcmCapability.isSuccess, advertisesUACMode else {
                     DispatchQueue.main.async {
-                        completion(.failure(L10n.tr("模块未报告 QPCMV 0-2 能力，拒绝启用 CellDock USB 音频配置。")))
+                        completion(.failure(L10n.tr("模块未报告 QPCMV 0-2 能力，拒绝启用 CellDockPlus USB 音频配置。")))
                     }
                     return
                 }
@@ -1340,7 +1340,7 @@ final class ModemService {
                     self.beginExpectedModuleRestart()
                     DispatchQueue.main.async {
                         completion(.failure(
-                            L10n.tr("USBCFG 写入响应不明确，CellDock 未自动重试；正在等待 USB 重新枚举并回读实际状态。")
+                            L10n.tr("USBCFG 写入响应不明确，CellDockPlus 未自动重试；正在等待 USB 重新枚举并回读实际状态。")
                         ))
                     }
                     return
@@ -1384,7 +1384,7 @@ final class ModemService {
             guard finalConfiguration.isSuccess,
                   ATResponseParser.parseUSBConfiguration(finalConfiguration.output)?.isCellDockTarget == true else {
                 DispatchQueue.main.async {
-                    completion(.failure(L10n.tr("重启前无法再次确认 CellDock USB 目标配置，已停止。")))
+                    completion(.failure(L10n.tr("重启前无法再次确认 CellDockPlus USB 目标配置，已停止。")))
                 }
                 return
             }
@@ -3023,7 +3023,7 @@ final class ModemService {
             case .quectelNativeVoice:
                 if let pcmCapability, pcmCapability.isSuccess {
                     snapshot.voiceCapability = .unsupported(
-                        reason: L10n.tr("AT+QPCMV=? 未报告 CellDock 所需的原始 PCM 模式。")
+                        reason: L10n.tr("AT+QPCMV=? 未报告 CellDockPlus 所需的原始 PCM 模式。")
                     )
                     errorText = L10n.tr("固件未报告可用的 USB 通话媒体通道。")
                 } else if let pcmCapability,
@@ -3186,7 +3186,7 @@ final class ModemService {
         let generation = qdcInitializationRetryGeneration
         qdcInitializationRetryAttempts += 1
         callSnapshot.lastError = L10n.tr(
-            "模块控制接口正被其他 ADB 客户端占用；CellDock 将自动重试（%lld/5）。",
+            "模块控制接口正被其他 ADB 客户端占用；CellDockPlus 将自动重试（%lld/5）。",
             Int64(qdcInitializationRetryAttempts)
         )
         callSnapshot.controlInterfaceBusy = true

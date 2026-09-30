@@ -2,7 +2,7 @@ import OSLog
 import SwiftUI
 
 private let compactCallLogger = Logger(
-    subsystem: Bundle.main.bundleIdentifier ?? "app.celldock.mac",
+    subsystem: Bundle.main.bundleIdentifier ?? "app.celldockplus.mac",
     category: "MenuBarDialer"
 )
 

@@ -537,7 +537,7 @@ do {
         exit(64)
     }
     let defaultFile = FileManager.default.homeDirectoryForCurrentUser
-        .appendingPathComponent("Library/Application Support/CellDock/messages.json").path
+        .appendingPathComponent("Library/Application Support/CellDockPlus/messages.json").path
     let filePath = argument("--messages-file") ?? defaultFile
     guard let data = try? Data(contentsOf: URL(fileURLWithPath: filePath)),
           let messages = try? JSONDecoder().decode([StoredMessage].self, from: data),

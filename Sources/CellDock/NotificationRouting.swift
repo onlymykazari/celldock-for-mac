@@ -1,13 +1,13 @@
 import Foundation
 
 enum AppNotificationIdentifier {
-    static let incomingCallCategory = "app.celldock.notification.incoming-call"
-    static let missedCallCategory = "app.celldock.notification.missed-call"
-    static let messageCategory = "app.celldock.notification.message"
-    static let answerCallAction = "app.celldock.notification.answer-call"
-    static let rejectCallAction = "app.celldock.notification.reject-call"
-    static let openCallWindowAction = "app.celldock.notification.open-call-window"
-    static let openMessageAction = "app.celldock.notification.open-message"
+    static let incomingCallCategory = "app.celldockplus.notification.incoming-call"
+    static let missedCallCategory = "app.celldockplus.notification.missed-call"
+    static let messageCategory = "app.celldockplus.notification.message"
+    static let answerCallAction = "app.celldockplus.notification.answer-call"
+    static let rejectCallAction = "app.celldockplus.notification.reject-call"
+    static let openCallWindowAction = "app.celldockplus.notification.open-call-window"
+    static let openMessageAction = "app.celldockplus.notification.open-message"
 }
 
 enum AppNotificationRoute: Equatable {

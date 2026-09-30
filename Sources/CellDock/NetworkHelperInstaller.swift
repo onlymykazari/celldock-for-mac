@@ -14,9 +14,9 @@ enum NetworkHelperInstallationError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .invalidAppLocation:
-            return L10n.tr("CellDock 必须位于“应用程序”文件夹中，才能安全安装网络 helper。")
+            return L10n.tr("CellDockPlus 必须位于“应用程序”文件夹中，才能安全安装网络 helper。")
         case let .missingBundledFile(name):
-            return L10n.tr("当前 CellDock 安装包缺少 %@，请重新安装最新版。", name)
+            return L10n.tr("当前 CellDockPlus 安装包缺少 %@，请重新安装最新版。", name)
         case .invalidBundledHelper:
             return L10n.tr("安装包内的网络 helper 签名校验失败，未请求管理员权限。")
         case .cancelled:
@@ -88,7 +88,7 @@ struct NetworkHelperInstaller {
             "/Library/LaunchDaemons/app.mavo.mac.network-helper.plist"
         let helperRequirement = "=identifier \"\(CellDockCodeSigningPolicy.helperIdentifier)\" " +
             "and certificate leaf = H\"\(validatedBundle.certificateSHA1)\""
-        let runtimeRequirement = "=identifier \"app.celldock.mac.vowifi.runtime\" " +
+        let runtimeRequirement = "=identifier \"app.celldockplus.mac.vowifi.runtime\" " +
             "and certificate leaf = H\"\(validatedBundle.certificateSHA1)\""
         let cleanupCommand = "/bin/rm -f \(shellQuote(helperTemporary)) " +
             "\(shellQuote(voWiFiRuntimeTemporary)) \(shellQuote(plistTemporary))"
@@ -158,7 +158,7 @@ struct NetworkHelperInstaller {
         let shellCommand = commands.joined(separator: "; ")
         let script = "do shell script \(appleScriptLiteral(shellCommand)) " +
             "with administrator privileges with prompt " +
-            appleScriptLiteral(L10n.tr("CellDock 需要安装一次网络 helper。以后切换蜂窝网络将不再要求密码。"))
+            appleScriptLiteral(L10n.tr("CellDockPlus 需要安装一次网络 helper。以后切换蜂窝网络将不再要求密码。"))
 
         let process = Process()
         let standardError = Pipe()
@@ -214,7 +214,7 @@ struct NetworkHelperInstaller {
               ),
               SecStaticCodeCheckValidity(staticCode, [], helperRequirement) == errSecSuccess,
               let runtimeRequirement = CellDockCodeSigningPolicy.identifierRequirement(
-                  "app.celldock.mac.vowifi.runtime"
+                  "app.celldockplus.mac.vowifi.runtime"
               ),
               SecStaticCodeCheckValidity(runtimeStaticCode, [], runtimeRequirement) == errSecSuccess,
               let appCode = CellDockCodeSigningPolicy.currentProcessCode(),

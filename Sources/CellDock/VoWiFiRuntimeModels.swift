@@ -203,7 +203,7 @@ enum VoWiFiSessionState: Equatable, Sendable {
     case establishingTunnel(VoWiFiRuntimeStatus)
     case registeringIMS(VoWiFiRuntimeStatus)
     case registered(VoWiFiRuntimeStatus)
-    /// The module is running a session CellDock did not start, so its SOCKS5
+    /// The module is running a session CellDockPlus did not start, so its SOCKS5
     /// peer is gone. Reported instead of a phantom "registered".
     case desynchronized(VoWiFiRuntimeStatus)
     case failed(String)
@@ -254,7 +254,7 @@ enum VoWiFiSessionState: Equatable, Sendable {
         }
     }
 
-    /// True while CellDock believes the module should be running a session.
+    /// True while CellDockPlus believes the module should be running a session.
     var isRunning: Bool {
         switch self {
         case .starting, .authenticatingSIM, .establishingTunnel,
@@ -333,7 +333,7 @@ enum VoWiFiSessionState: Equatable, Sendable {
         case let .egressUnavailable(problem):
             return problem.localizedDescription
         case .desynchronized:
-            return L10n.tr("模组正在运行一个由其他会话启动的运行时，其 SOCKS5 中继已不存在。CellDock 会自动重建会话。")
+            return L10n.tr("模组正在运行一个由其他会话启动的运行时，其 SOCKS5 中继已不存在。CellDockPlus 会自动重建会话。")
         default:
             return nil
         }

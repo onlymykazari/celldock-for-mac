@@ -44,7 +44,7 @@ private enum ModuleMaintenanceCLI {
         }
 
         func fail(_ message: String, code: Int32 = 64) -> Never {
-            FileHandle.standardError.write(Data("CellDock module tool: \(message)\n".utf8))
+            FileHandle.standardError.write(Data("CellDockPlus module tool: \(message)\n".utf8))
             Darwin.exit(code)
         }
 

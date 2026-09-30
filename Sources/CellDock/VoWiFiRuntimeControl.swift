@@ -1,11 +1,11 @@
 import Foundation
 
-/// Everything CellDock hands to the module-side `vowifi-go` control host for
+/// Everything CellDockPlus hands to the module-side `vowifi-go` control host for
 /// one session. It is deliberately small: the runtime resolves the carrier
 /// profile, ePDG and IMS identity from the SIM itself.
 struct VoWiFiSessionRequest: Equatable, Sendable {
     /// Correlation token echoed back by `status`, so a runtime left over from a
-    /// previous CellDock launch can be detected instead of trusted.
+    /// previous CellDockPlus launch can be detected instead of trusted.
     let sessionID: String
     /// `socks5://user:password@host:port` reachable from the module over ECM.
     let proxyURL: String

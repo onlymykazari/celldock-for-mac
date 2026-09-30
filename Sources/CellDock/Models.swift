@@ -249,7 +249,7 @@ enum ModemInitializationStage: Int, CaseIterable {
 }
 
 /// Bounded, visible auto-retry for failed must-succeed configuration queries
-/// (doc 16 R5). After three failed rounds CellDock stops changing state and
+/// (doc 16 R5). After three failed rounds CellDockPlus stops changing state and
 /// says so, leaving the manual actions to the user.
 enum ModemConfigurationQueryRetryPolicy {
     static let maximumAttempts = 3
@@ -327,7 +327,7 @@ struct ModemSnapshot: Equatable {
         }
         if configurationRetryAttempt > 0 {
             return detail + "\n" + L10n.tr(
-                "CellDock 将自动重试（%lld/%lld）。",
+                "CellDockPlus 将自动重试（%lld/%lld）。",
                 Int64(configurationRetryAttempt),
                 Int64(ModemConfigurationQueryRetryPolicy.maximumAttempts)
             )

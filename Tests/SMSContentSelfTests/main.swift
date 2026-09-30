@@ -18,7 +18,7 @@ func websites(_ result: SMSContentDetection) -> [URL] {
     }
 }
 
-let mixedText = "🔐【CellDock】验证码 482913，请访问 https://example.com/13800138000?code=123456，或联系 13800138000。"
+let mixedText = "🔐【CellDockPlus】验证码 482913，请访问 https://example.com/13800138000?code=123456，或联系 13800138000。"
 let mixed = SMSContentDetector.detect(in: mixedText)
 expect(mixed.verificationCode?.code == "482913", "Mixed SMS must retain the actual OTP")
 expect(phones(mixed) == ["13800138000"], "Digits inside a URL or OTP must not become phone links")

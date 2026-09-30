@@ -3,7 +3,7 @@ import Darwin
 import Foundation
 import OSLog
 
-private let euiccLogger = Logger(subsystem: "app.celldock.mac", category: "EUICC")
+private let euiccLogger = Logger(subsystem: "app.celldockplus.mac", category: "EUICC")
 
 private final class EUICCURLSessionDelegate: NSObject, URLSessionTaskDelegate {
     func urlSession(

@@ -134,7 +134,7 @@ struct SIMManagementView: View {
                 appState.setIncomingCallsEnabled(enabled, moduleID: selectedModuleID)
             }
         } message: {
-            Text(L10n.tr("CellDock 会在%@中写入并回读 IMS=%lld，校验成功后再重启模块。蜂窝网络将短暂中断。", selectedModule?.displayName ?? L10n.tr("当前模组"), Int64(pendingIncomingCallsEnabled == true ? 1 : 0)))
+            Text(L10n.tr("CellDockPlus 会在%@中写入并回读 IMS=%lld，校验成功后再重启模块。蜂窝网络将短暂中断。", selectedModule?.displayName ?? L10n.tr("当前模组"), Int64(pendingIncomingCallsEnabled == true ? 1 : 0)))
         }
     }
 
@@ -199,7 +199,7 @@ struct SIMManagementView: View {
                 ContentUnavailableView(
                     "未发现蜂窝模组",
                     systemImage: "externaldrive.badge.questionmark",
-                    description: Text("连接设备后，CellDock 会自动识别。")
+                    description: Text("连接设备后，CellDockPlus 会自动识别。")
                 )
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {

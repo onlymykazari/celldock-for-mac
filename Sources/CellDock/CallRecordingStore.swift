@@ -438,7 +438,7 @@ final class CallRecordingCapture: @unchecked Sendable {
         case downlink
     }
 
-    private let queue = DispatchQueue(label: "app.celldock.mac.call-recording", qos: .utility)
+    private let queue = DispatchQueue(label: "app.celldockplus.mac.call-recording", qos: .utility)
     private let lock = NSLock()
     private var active: ActiveCapture?
     private let maximumPendingBytes = 2 * 1_024 * 1_024
@@ -452,7 +452,7 @@ final class CallRecordingCapture: @unchecked Sendable {
                 throw RecordingCaptureError.alreadyRecording
             }
             let temporaryDirectory = FileManager.default.temporaryDirectory
-                .appendingPathComponent("CellDock-recording-\(id.uuidString)", isDirectory: true)
+                .appendingPathComponent("CellDockPlus-recording-\(id.uuidString)", isDirectory: true)
             try FileManager.default.createDirectory(
                 at: temporaryDirectory,
                 withIntermediateDirectories: true

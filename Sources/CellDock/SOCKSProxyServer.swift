@@ -3,7 +3,7 @@ import Network
 import OSLog
 
 private let socksServerLogger = Logger(
-    subsystem: "app.celldock.mac",
+    subsystem: "app.celldockplus.mac",
     category: "SOCKSProxy"
 )
 
@@ -37,7 +37,7 @@ final class SOCKSProxyServer {
         self.password = password
         self.udpUpstreamProxy = udpUpstreamProxy
         self.localBindAddress = localBindAddress
-        queue = DispatchQueue(label: "app.celldock.socks.\(configuration.id.uuidString)")
+        queue = DispatchQueue(label: "app.celldockplus.socks.\(configuration.id.uuidString)")
     }
 
     /// Pushed from the controller whenever the module's live network identity
@@ -142,7 +142,7 @@ final class SOCKSProxyServer {
             binding: binding,
             udpUpstreamProxy: udpUpstreamProxy,
             udpListenAddress: localBindAddress,
-            queue: DispatchQueue(label: "app.celldock.socks.session.\(id.uuidString)")
+            queue: DispatchQueue(label: "app.celldockplus.socks.session.\(id.uuidString)")
         )
         session.onClose = { [weak self] in
             guard let self else { return }

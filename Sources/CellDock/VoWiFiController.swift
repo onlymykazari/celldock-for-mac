@@ -4,7 +4,7 @@ import CellDockNetworkIPC
 import OSLog
 
 private let voWiFiLogger = Logger(
-    subsystem: "app.celldock.mac",
+    subsystem: "app.celldockplus.mac",
     category: "VoWiFi"
 )
 
@@ -144,7 +144,7 @@ final class VoWiFiController: ObservableObject {
         simBridges.removeValue(forKey: moduleID)?.stop()
         let bridge = VoWiFiSIMBridge(moduleID: moduleID) { [weak self] command, timeout, completion in
             guard let self else {
-                completion(VoWiFiATResult(output: "", error: L10n.tr("CellDock 已停止。")))
+                completion(VoWiFiATResult(output: "", error: L10n.tr("CellDockPlus 已停止。")))
                 return
             }
             self.appState.executeVoWiFiAT(
@@ -351,7 +351,7 @@ final class VoWiFiController: ObservableObject {
             )
             return
         }
-        let queue = DispatchQueue(label: "app.celldock.vowifi.probe.\(id.uuidString)")
+        let queue = DispatchQueue(label: "app.celldockplus.vowifi.probe.\(id.uuidString)")
         let association = SOCKS5UpstreamAssociation(
             configuration: snapshot,
             bsdName: snapshot.usesLoopbackEndpoint ? "lo0" : egress.bsdName,

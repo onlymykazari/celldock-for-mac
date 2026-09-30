@@ -28,7 +28,7 @@ enum LaunchAtLoginControllerError: LocalizedError {
 }
 
 struct LaunchAtLoginController {
-    static let label = "app.celldock.mac.launch-at-login"
+    static let label = "app.celldockplus.mac.launch-at-login"
     private static let legacyLabel = "app.mavo.mac.launch-at-login"
 
     private let fileManager = FileManager.default

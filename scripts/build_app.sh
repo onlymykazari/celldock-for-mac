@@ -90,30 +90,30 @@ else
   CODESIGN_OPTIONS=(--options runtime --timestamp=none)
   APP_REQUIREMENT_OPTIONS=(
     --requirements
-    "=designated => identifier \"app.celldock.mac\" and certificate leaf = H\"$SIGN_CERT_SHA1\""
+    "=designated => identifier \"app.celldockplus.mac\" and certificate leaf = H\"$SIGN_CERT_SHA1\""
   )
   HELPER_REQUIREMENT_OPTIONS=(
     --requirements
-    "=designated => identifier \"app.celldock.mac.network.helper\" and certificate leaf = H\"$SIGN_CERT_SHA1\""
+    "=designated => identifier \"app.celldockplus.mac.network.helper\" and certificate leaf = H\"$SIGN_CERT_SHA1\""
   )
 fi
 OUTPUT_DIR="$ROOT/outputs"
-APP="$OUTPUT_DIR/CellDock.app"
+APP="$OUTPUT_DIR/CellDockPlus.app"
 ARCHIVE_ARCH="universal"
 BUILD_ARCH_OPTIONS=(--arch arm64 --arch x86_64)
-ZIP="$OUTPUT_DIR/CellDock-$VERSION-$ARCHIVE_ARCH$ARCHIVE_SUFFIX.zip"
-PUBLISH_ZIP="$OUTPUT_DIR/.CellDock-$VERSION-$ARCHIVE_ARCH$ARCHIVE_SUFFIX.$$.zip"
-STAGE_DIR="$(mktemp -d /tmp/CellDock-build.XXXXXX)"
+ZIP="$OUTPUT_DIR/CellDockPlus-$VERSION-$ARCHIVE_ARCH$ARCHIVE_SUFFIX.zip"
+PUBLISH_ZIP="$OUTPUT_DIR/.CellDockPlus-$VERSION-$ARCHIVE_ARCH$ARCHIVE_SUFFIX.$$.zip"
+STAGE_DIR="$(mktemp -d /tmp/CellDockPlus-build.XXXXXX)"
 STAGE_PACKAGE_DIR="$STAGE_DIR/package"
-STAGE_APP="$STAGE_PACKAGE_DIR/CellDock.app"
+STAGE_APP="$STAGE_PACKAGE_DIR/CellDockPlus.app"
 SPARKLE_FRAMEWORK_SOURCE="$ROOT/.build/artifacts/sparkle/Sparkle/Sparkle.xcframework/macos-arm64_x86_64/Sparkle.framework"
 SPARKLE_FRAMEWORK_RELATIVE="Contents/Frameworks/Sparkle.framework"
-STAGE_ZIP="$STAGE_DIR/CellDock-$VERSION-$ARCHIVE_ARCH$ARCHIVE_SUFFIX.zip"
+STAGE_ZIP="$STAGE_DIR/CellDockPlus-$VERSION-$ARCHIVE_ARCH$ARCHIVE_SUFFIX.zip"
 VERIFY_DIR="$STAGE_DIR/verify"
-VERIFY_APP="$VERIFY_DIR/CellDock.app"
+VERIFY_APP="$VERIFY_DIR/CellDockPlus.app"
 HELPER_RELATIVE="Contents/Library/PrivilegedHelperTools/CellDockNetworkHelper"
 VOWIFI_RUNTIME_RELATIVE="Contents/Library/PrivilegedHelperTools/CellDockVoWiFiRuntime"
-PLIST_RELATIVE="Contents/Library/LaunchDaemons/app.celldock.mac.network.helper.plist"
+PLIST_RELATIVE="Contents/Library/LaunchDaemons/app.celldockplus.mac.network.helper.plist"
 cleanup() {
   /bin/rm -rf -- "$STAGE_DIR"
   /bin/rm -f -- "$PUBLISH_ZIP"
@@ -175,7 +175,7 @@ lipo -create \
   "$STAGE_DIR/vowifi/CellDockVoWiFiRuntime-x86_64" \
   -output "$STAGE_APP/$VOWIFI_RUNTIME_RELATIVE"
 chmod 0755 "$STAGE_APP/$VOWIFI_RUNTIME_RELATIVE"
-cp "$ROOT/Resources/app.celldock.mac.network.helper.plist" "$STAGE_APP/$PLIST_RELATIVE"
+cp "$ROOT/Resources/app.celldockplus.mac.network.helper.plist" "$STAGE_APP/$PLIST_RELATIVE"
 [[ -d "$SPARKLE_FRAMEWORK_SOURCE" ]] || {
   print -u2 "SwiftPM did not resolve the Sparkle framework."
   exit 1
@@ -189,7 +189,7 @@ codesign \
   --force \
   --sign "$SIGN_IDENTITY" \
   "${CODESIGN_OPTIONS[@]}" \
-  --identifier app.celldock.mac.vowifi.runtime \
+  --identifier app.celldockplus.mac.vowifi.runtime \
   "$STAGE_APP/$VOWIFI_RUNTIME_RELATIVE"
 codesign \
   --force \
@@ -222,14 +222,14 @@ codesign \
   --sign "$SIGN_IDENTITY" \
   "${CODESIGN_OPTIONS[@]}" \
   "${HELPER_REQUIREMENT_OPTIONS[@]}" \
-  --identifier app.celldock.mac.network.helper \
+  --identifier app.celldockplus.mac.network.helper \
   "$STAGE_APP/$HELPER_RELATIVE"
 codesign \
   --force \
   --sign "$SIGN_IDENTITY" \
   "${CODESIGN_OPTIONS[@]}" \
   "${APP_REQUIREMENT_OPTIONS[@]}" \
-  --identifier app.celldock.mac \
+  --identifier app.celldockplus.mac \
   "$STAGE_APP"
 codesign --verify --deep --strict --verbose=2 "$STAGE_APP"
 
@@ -249,8 +249,8 @@ for signed_code in \
     --test-requirement "=certificate leaf = H\"$SIGN_CERT_SHA1\"" \
     "$signed_code"
 done
-if [[ "$SIGNING_MODE" == development && -d /Applications/CellDock.app ]]; then
-  EXISTING_TEAM_ID="$(codesign -dvv /Applications/CellDock.app 2>&1 | awk -F= '$1 == "TeamIdentifier" && !found { print $2; found=1 }')"
+if [[ "$SIGNING_MODE" == development && -d /Applications/CellDockPlus.app ]]; then
+  EXISTING_TEAM_ID="$(codesign -dvv /Applications/CellDockPlus.app 2>&1 | awk -F= '$1 == "TeamIdentifier" && !found { print $2; found=1 }')"
   SIGNED_TEAM_ID="$(codesign -dvv "$STAGE_APP" 2>&1 | awk -F= '$1 == "TeamIdentifier" && !found { print $2; found=1 }')"
   [[ -n "$EXISTING_TEAM_ID" && "$SIGNED_TEAM_ID" == "$EXISTING_TEAM_ID" ]] || {
     print -u2 "Development signing Team ID does not match the installed CellDock app."
@@ -291,7 +291,7 @@ plutil -lint "$VERIFY_PLIST"
   print -u2 "Archive Info.plist build version does not match $BUILD_VERSION."
   exit 1
 }
-[[ "$(plutil -extract CFBundleIdentifier raw "$VERIFY_APP/Contents/Info.plist")" == "app.celldock.mac" ]] || {
+[[ "$(plutil -extract CFBundleIdentifier raw "$VERIFY_APP/Contents/Info.plist")" == "app.celldockplus.mac" ]] || {
   print -u2 "Archive app bundle identifier is incorrect."
   exit 1
 }
@@ -299,7 +299,7 @@ plutil -lint "$VERIFY_PLIST"
   print -u2 "Archive app executable name is incorrect."
   exit 1
 }
-[[ "$(plutil -extract CFBundleDisplayName raw "$VERIFY_APP/Contents/Info.plist")" == "CellDock" ]] || {
+[[ "$(plutil -extract CFBundleDisplayName raw "$VERIFY_APP/Contents/Info.plist")" == "CellDockPlus" ]] || {
   print -u2 "Archive app display name is incorrect."
   exit 1
 }
@@ -395,15 +395,15 @@ VERIFY_VOWIFI_ARCHS=" $(lipo -archs "$VERIFY_VOWIFI_RUNTIME") "
   print -u2 "Archive helper minOS is not 14.0."
   exit 1
 }
-[[ "$(codesign -dvv "$VERIFY_BINARY" 2>&1 | awk -F= '$1 == "Identifier" { print $2; exit }')" == "app.celldock.mac" ]] || {
+[[ "$(codesign -dvv "$VERIFY_BINARY" 2>&1 | awk -F= '$1 == "Identifier" { print $2; exit }')" == "app.celldockplus.mac" ]] || {
   print -u2 "Archive executable signing identifier is incorrect."
   exit 1
 }
-[[ "$(codesign -dvv "$VERIFY_HELPER" 2>&1 | awk -F= '$1 == "Identifier" { print $2; exit }')" == "app.celldock.mac.network.helper" ]] || {
+[[ "$(codesign -dvv "$VERIFY_HELPER" 2>&1 | awk -F= '$1 == "Identifier" { print $2; exit }')" == "app.celldockplus.mac.network.helper" ]] || {
   print -u2 "Archive helper signing identifier is incorrect."
   exit 1
 }
-[[ "$(plutil -extract Label raw "$VERIFY_PLIST")" == "app.celldock.mac.network.helper" ]] || {
+[[ "$(plutil -extract Label raw "$VERIFY_PLIST")" == "app.celldockplus.mac.network.helper" ]] || {
   print -u2 "LaunchDaemon label is incorrect."
   exit 1
 }
@@ -411,7 +411,7 @@ VERIFY_VOWIFI_ARCHS=" $(lipo -archs "$VERIFY_VOWIFI_RUNTIME") "
   print -u2 "LaunchDaemon helper path is incorrect."
   exit 1
 }
-[[ "$(/usr/libexec/PlistBuddy -c 'Print :MachServices:app.celldock.mac.network.helper' "$VERIFY_PLIST")" == "true" ]] || {
+[[ "$(/usr/libexec/PlistBuddy -c 'Print :MachServices:app.celldockplus.mac.network.helper' "$VERIFY_PLIST")" == "true" ]] || {
   print -u2 "LaunchDaemon Mach service is missing."
   exit 1
 }
@@ -450,6 +450,6 @@ fi
 rm -rf -- "$APP"
 find "$OUTPUT_DIR" -maxdepth 1 -type d -name 'CellDock.previous.*.app' \
   -exec rm -rf -- {} +
-find "$OUTPUT_DIR" -maxdepth 1 -type f -name 'CellDock-*-universal.zip.previous.*' \
+find "$OUTPUT_DIR" -maxdepth 1 -type f -name 'CellDockPlus-*-universal.zip.previous.*' \
   -exec rm -f -- {} +
 print "Verified archive: $ZIP"

@@ -7,7 +7,7 @@ import OSLog
 import SystemConfiguration
 
 private let rootNetworkLogger = Logger(
-    subsystem: "app.celldock.mac.network.helper",
+    subsystem: "app.celldockplus.mac.network.helper",
     category: "CellularNetwork"
 )
 
@@ -49,7 +49,7 @@ final class RootNetworkMutator {
 
         guard let preferences = SCPreferencesCreate(
             nil,
-            "CellDock Network Helper" as NSString,
+            "CellDockPlus Network Helper" as NSString,
             nil
         ) else {
             return .failure(systemConfigurationError("无法建立网络配置会话"))

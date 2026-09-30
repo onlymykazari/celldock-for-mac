@@ -31,7 +31,7 @@ try expect(
 )
 
 let temporaryDirectory = FileManager.default.temporaryDirectory
-    .appendingPathComponent("CellDock-recording-test-\(UUID().uuidString)", isDirectory: true)
+    .appendingPathComponent("CellDockPlus-recording-test-\(UUID().uuidString)", isDirectory: true)
 try FileManager.default.createDirectory(at: temporaryDirectory, withIntermediateDirectories: true)
 defer { try? FileManager.default.removeItem(at: temporaryDirectory) }
 

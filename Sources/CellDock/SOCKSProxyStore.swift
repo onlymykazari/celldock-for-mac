@@ -3,7 +3,7 @@ import Foundation
 import Security
 
 struct SOCKSProxyCredentialStore {
-    private let service = "app.celldock.mac.socks-proxy"
+    private let service = "app.celldockplus.mac.socks-proxy"
 
     func password(for id: UUID) throws -> String? {
         let query: [String: Any] = [
