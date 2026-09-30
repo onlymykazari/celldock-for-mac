@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- Hardened runtime (macOS 10.14+) gates the TCC microphone prompt on
+         this entitlement: without it tccd silently denies the request and
+         never shows the authorization dialog ("Prompting policy for
+         hardened runtime ... missing com.apple.security.device.audio-input"). -->
+    <key>com.apple.security.device.audio-input</key>
+    <true/>
+</dict>
+</plist>
