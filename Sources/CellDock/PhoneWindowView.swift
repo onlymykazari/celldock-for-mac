@@ -138,6 +138,14 @@ struct PhoneWindowView: View {
                 }
             )
                 .environmentObject(appState)
+                .onPreferenceChange(CellDockSettingsView.SettingsContentHeightKey.self) { contentHeight in
+                    // A tall category (通用 at minimum window size) must not sit
+                    // clipped at the window's bottom edge: let the window grow
+                    // to fit, bounded by the visible screen.
+                    CommunicationWindowController.shared.adaptPhoneWindowHeight(
+                        toFitContentHeight: contentHeight
+                    )
+                }
         }
     }
 

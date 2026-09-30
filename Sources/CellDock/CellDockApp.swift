@@ -3,8 +3,7 @@ import Darwin
 import SwiftUI
 
 @main
-struct CellDockApp: App {
-    @NSApplicationDelegateAdaptor(AppTerminationDelegate.self) private var appDelegate
+struct CellDockApp: App {    @NSApplicationDelegateAdaptor(AppTerminationDelegate.self) private var appDelegate
     @StateObject private var appState: AppState
 
     init() {

@@ -321,6 +321,36 @@ final class CommunicationWindowController: NSObject, NSWindowDelegate {
         windows[.phone]?.title = communicationWindowTitle
     }
 
+    /// Grows the phone window so the selected settings category fits without
+    /// scrolling, clamped to the visible screen. Content taller than the
+    /// screen still scrolls (the settings detail keeps its ScrollView). This
+    /// never shrinks the window, never touches its width, and never runs in
+    /// fullscreen, so the user's manual sizing always wins.
+    func adaptPhoneWindowHeight(toFitContentHeight contentHeight: CGFloat) {
+        guard phoneModel.selection == .settings,
+              let window = windows[.phone],
+              window.isVisible,
+              !window.styleMask.contains(.fullScreen) else {
+            return
+        }
+        let screenFrame = window.screen?.visibleFrame
+            ?? NSScreen.main?.visibleFrame
+            ?? window.frame
+        let chromeHeight = window.frame.height - window.contentLayoutRect.height
+        let maximumContentHeight = max(window.minSize.height, screenFrame.height - chromeHeight)
+        let currentContentHeight = window.contentLayoutRect.height
+        let targetContentHeight = min(
+            max(contentHeight, window.minSize.height),
+            maximumContentHeight
+        )
+        guard targetContentHeight > currentContentHeight + 1 else { return }
+        var frame = window.frame
+        let delta = targetContentHeight - currentContentHeight
+        frame.size.height += delta
+        frame.origin.y -= delta
+        window.setFrame(frame, display: true, animate: false)
+    }
+
     @objc private func appLanguageDidChange() {
         windows[.phone]?.title = communicationWindowTitle
         windows[.messages]?.title = L10n.tr("短信")

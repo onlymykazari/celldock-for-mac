@@ -253,6 +253,17 @@ struct CellDockSettingsView: View {
         didResolveInitialCategory = true
     }
 
+    /// Reports the full (unclipped) height of the detail content upward so
+    /// the hosting window can grow to fit the selected category. Without
+    /// this, a small window shows a tall page like 通用 clipped at the bottom
+    /// with no visible affordance that the rest is reachable.
+    struct SettingsContentHeightKey: PreferenceKey {
+        static var defaultValue: CGFloat = 0
+        static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+            value = max(value, nextValue())
+        }
+    }
+
     private var settingsContent: some View {
         ScrollView {
             AdaptiveGlassContainer(spacing: 16) {
@@ -263,6 +274,14 @@ struct CellDockSettingsView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(22)
+            .background {
+                GeometryReader { proxy in
+                    Color.clear.preference(
+                        key: SettingsContentHeightKey.self,
+                        value: proxy.size.height
+                    )
+                }
+            }
         }
         .scrollContentBackground(.hidden)
         .background(Color.clear)
