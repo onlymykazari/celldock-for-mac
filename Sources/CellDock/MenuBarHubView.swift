@@ -77,6 +77,14 @@ struct MenuBarHubView: View {
                     }
                 }
 
+                if showsQuickControls {
+                    QuickControlsCard(
+                        moduleID: appState.currentCommunicationModule?.id,
+                        treatment: .regular
+                    )
+                    .padding(.top, 6)
+                }
+
                 if appState.isPresentationPrivacyEnabled {
                     Label(L10n.tr("演示隐私保护已开启"), systemImage: "checkmark.shield.fill")
                         .font(.caption.weight(.medium))
@@ -123,6 +131,12 @@ struct MenuBarHubView: View {
         .padding(.horizontal, MenuBarHubMetrics.horizontalInset)
         .padding(.vertical, MenuBarHubMetrics.verticalInset)
         .frame(width: MenuBarHubMetrics.panelWidth)
+    }
+
+    /// 快捷控制卡仅在当前通话模组已连接时显示；未连接时整个卡片隐藏，
+    /// 避免出现一排永远不可用的开关。
+    private var showsQuickControls: Bool {
+        appState.currentCommunicationModule?.modem.isConnected == true
     }
 
     private var menuDestinations: some View {
