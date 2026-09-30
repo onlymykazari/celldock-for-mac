@@ -140,10 +140,15 @@ struct PhoneWindowView: View {
                 .environmentObject(appState)
                 .onPreferenceChange(CellDockSettingsView.SettingsContentHeightKey.self) { contentHeight in
                     // A tall category (通用 at minimum window size) must not sit
-                    // clipped at the window's bottom edge: let the window grow
-                    // to fit, bounded by the visible screen.
-                    CommunicationWindowController.shared.adaptPhoneWindowHeight(
-                        toFitContentHeight: contentHeight
+                    // clipped at the window's bottom edge, and the rows' wide
+                    // fixed accessories must not clip at the trailing edge: let
+                    // the window grow to fit, bounded by the visible screen.
+                    let minimumWindowWidth = CommunicationUI.railWidth
+                        + sidebarWidthBinding.wrappedValue
+                        + CellDockSettingsView.detailMinimumWidth
+                    CommunicationWindowController.shared.adaptPhoneWindowSize(
+                        toFitContentHeight: contentHeight,
+                        minimumWindowWidth: minimumWindowWidth
                     )
                 }
         }

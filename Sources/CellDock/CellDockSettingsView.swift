@@ -264,6 +264,12 @@ struct CellDockSettingsView: View {
         }
     }
 
+    /// Smallest detail-column width that fits the settings rows' fixed-width
+    /// accessories (the 276pt segmented picker, wide buttons) without
+    /// clipping them at the trailing edge. Drives the window width
+    /// adaptation in `CommunicationWindowController`.
+    static let detailMinimumWidth: CGFloat = 460
+
     private var settingsContent: some View {
         ScrollView {
             AdaptiveGlassContainer(spacing: 16) {

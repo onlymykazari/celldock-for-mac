@@ -322,11 +322,14 @@ final class CommunicationWindowController: NSObject, NSWindowDelegate {
     }
 
     /// Grows the phone window so the selected settings category fits without
-    /// scrolling, clamped to the visible screen. Content taller than the
-    /// screen still scrolls (the settings detail keeps its ScrollView). This
-    /// never shrinks the window, never touches its width, and never runs in
+    /// scrolling or trailing-edge clipping, clamped to the visible screen.
+    /// Content taller than the screen still scrolls (the settings detail
+    /// keeps its ScrollView). This never shrinks the window and never runs in
     /// fullscreen, so the user's manual sizing always wins.
-    func adaptPhoneWindowHeight(toFitContentHeight contentHeight: CGFloat) {
+    func adaptPhoneWindowSize(
+        toFitContentHeight contentHeight: CGFloat,
+        minimumWindowWidth: CGFloat
+    ) {
         guard phoneModel.selection == .settings,
               let window = windows[.phone],
               window.isVisible,
@@ -336,18 +339,48 @@ final class CommunicationWindowController: NSObject, NSWindowDelegate {
         let screenFrame = window.screen?.visibleFrame
             ?? NSScreen.main?.visibleFrame
             ?? window.frame
-        let chromeHeight = window.frame.height - window.contentLayoutRect.height
+        var frame = window.frame
+        var didChange = false
+
+        // Height: grow to fit the category content, bounded by the screen.
+        let chromeHeight = frame.height - window.contentLayoutRect.height
         let maximumContentHeight = max(window.minSize.height, screenFrame.height - chromeHeight)
         let currentContentHeight = window.contentLayoutRect.height
         let targetContentHeight = min(
             max(contentHeight, window.minSize.height),
             maximumContentHeight
         )
-        guard targetContentHeight > currentContentHeight + 1 else { return }
-        var frame = window.frame
-        let delta = targetContentHeight - currentContentHeight
-        frame.size.height += delta
-        frame.origin.y -= delta
+        if targetContentHeight > currentContentHeight + 1 {
+            let delta = targetContentHeight - currentContentHeight
+            frame.size.height = frame.height + delta
+            frame.origin.y -= delta
+            didChange = true
+        }
+
+        // Width: the rows keep fixed-width accessories (segmented picker,
+        // buttons), so a too-narrow window clips them at the trailing edge.
+        let maximumWindowWidth = max(window.minSize.width, screenFrame.width)
+        let targetWidth = min(
+            max(minimumWindowWidth, frame.width),
+            maximumWindowWidth
+        )
+        if targetWidth > frame.width + 1 {
+            frame.size.width = targetWidth
+            didChange = true
+        }
+
+        guard didChange else { return }
+        // Keep the resized window fully on screen: keep the top edge when the
+        // height grows, then clamp against every screen edge.
+        if frame.maxY > screenFrame.maxY {
+            frame.origin.y = screenFrame.maxY - frame.height
+        }
+        if frame.minY < screenFrame.minY {
+            frame.origin.y = screenFrame.minY
+        }
+        if frame.maxX > screenFrame.maxX {
+            frame.origin.x = screenFrame.maxX - frame.width
+        }
         window.setFrame(frame, display: true, animate: false)
     }
 
