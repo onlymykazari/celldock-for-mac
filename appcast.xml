@@ -1,0 +1,29 @@
+<?xml version="1.0" standalone="yes"?>
+<rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" xmlns:dc="http://purl.org/dc/elements/1.1/" version="2.0">
+    <channel>
+        <title>CellDockPlus</title>
+        <link>https://github.com/onlymykazari/celldock-for-mac</link>
+        <description>CellDockPlus 更新通道</description>
+        <language>zh</language>
+        <item>
+            <title>CellDockPlus 0.4.0（构建 113）</title>
+            <pubDate>Wed, 30 Sep 2026 17:05:00 +0000</pubDate>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <description><![CDATA[
+                <ul>
+                <li>CellDockPlus 首个独立版本：品牌分家（新 bundle ID）</li>
+                <li>修复麦克风/通讯录授权弹窗被 tccd 静默拒绝的问题（hardened runtime entitlement）</li>
+                <li>菜单栏快捷控制卡（自动录音/飞行模式/蜂窝数据）+ 温度/电压/流量显示</li>
+                <li>通知转发：4 类事件 × 8 种渠道 × 按事件类别的请求体模板</li>
+                <li>语音信箱（支持跟随 macOS 专注模式）</li>
+                <li>初始化稳定性改造（doc16 R1-R5）：查询失败可诊断、分阶段进度、语音出关键路径</li>
+                <li>网络诊断面板 / 累计流量统计 / 模组短信存储清理</li>
+                <li>设置窗口高度自适应 + 快捷控制卡补入菜单栏弹层</li>
+                </ul>
+            ]]></description>
+            <enclosure url="https://github.com/onlymykazari/celldock-for-mac/releases/download/v0.4.0/CellDockPlus-0.4.0-universal-community-unnotarized.zip"
+                sparkle:edSignature="QG34sMl9x6pL7yVfyoi90Af0BHs2aAI2gqgaHU5R9SNy4yztVHGbTfJwq3TOhvHXxccX/xBHAeEklHgioCtNCw==" length="19265945"
+                type="application/octet-stream"/>
+        </item>
+    </channel>
+</rss>

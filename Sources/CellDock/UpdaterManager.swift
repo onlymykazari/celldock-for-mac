@@ -18,10 +18,12 @@ enum UpdateChannel: String, CaseIterable, Identifiable {
         }
     }
 
+    /// CellDockPlus 独立更新源：GitHub Releases 上的 appcast。
+    /// `releases/latest/download` 恒定指向含 appcast.xml 的最新发布，
+    /// 发布新版时只需在 Release 中附上签名后的 appcast.xml 即可。
+    /// stable/beta 暂共用同一源（beta 频道后续可拆分独立 appcast）。
     fileprivate var feedURL: String? {
-        // CellDockPlus 分叉暂无自己的更新源。返回 nil 禁用 Sparkle，
-        // 避免误抓上游 celldock.app 的 appcast 把分叉覆盖回上游版本。
-        nil
+        "https://github.com/onlymykazari/celldock-for-mac/releases/latest/download/appcast.xml"
     }
 }
 
