@@ -20,10 +20,13 @@ swiftc \
   -D DEBUG \
   -I "$ROOT/Sources/CModemBridge/include" \
   -Xcc "-fmodule-map-file=$ROOT/tools/CModemBridge.modulemap" \
+  "$ROOT/tools/L10n_stub.swift" \
   "$ROOT/Sources/CellDock/ADBProtocol.swift" \
   "$ROOT/Sources/CellDock/ADBModuleController.swift" \
   "$ROOT/Sources/CellDock/ModuleVoicePayload.swift" \
   "$ROOT/Sources/CellDock/ModuleVoiceRuntime.swift" \
+  "$ROOT/Sources/CellDock/VoWiFiRuntimeModels.swift" \
+  "$ROOT/Sources/CellDock/VoWiFiRuntimeControl.swift" \
   "$ROOT/tools/adb_module_probe.swift" \
   "$ROOT/.build/tools/ModemBridge.probe.o" \
   -framework IOKit \
